@@ -1,56 +1,65 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { authService } from '../services/auth.service';
-
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { getAccessToken } from '../services/api';
+import { AuthContext } from './auth-context-def';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check if token exists and fetch current user profile
-    const token = localStorage.getItem('fixloop_token');
-    if (token) {
-      authService
-        .getMe()
-        .then((response) => {
-          if (response.data) {
-            setUser(response.data);
+    let isMounted = true;
+
+    const restoreSession = async () => {
+      try {
+        const token = getAccessToken();
+        if (token) {
+          try {
+            const me = await authService.getMe();
+            if (isMounted && me) {
+              setUser(me);
+              setIsLoading(false);
+              return;
+            }
+          } catch {
+            // Access token might be expired, will attempt refresh below
           }
-        })
-        .catch(() => {
-          localStorage.removeItem('fixloop_token');
+        }
+
+        // Attempt silent session restoration using HttpOnly refresh-token cookie
+        const refreshed = await authService.refreshSession();
+        if (isMounted && refreshed?.user) {
+          setUser(refreshed.user);
+        }
+      } catch {
+        if (isMounted) {
           setUser(null);
-        })
-        .finally(() => {
+        }
+      } finally {
+        if (isMounted) {
           setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
-    }
+        }
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     const res = await authService.login({ email, password });
-    if (res.data?.token) {
-      localStorage.setItem('fixloop_token', res.data.token);
+    if (res.data?.user) {
       setUser(res.data.user);
     }
   };
 
   const register = async (name: string, email: string, password: string) => {
     const res = await authService.register({ name, email, password });
-    if (res.data?.token) {
-      localStorage.setItem('fixloop_token', res.data.token);
+    if (res.data?.user) {
       setUser(res.data.user);
     }
   };
@@ -59,7 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authService.logout();
     } finally {
-      localStorage.removeItem('fixloop_token');
       setUser(null);
     }
   };
@@ -69,12 +77,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

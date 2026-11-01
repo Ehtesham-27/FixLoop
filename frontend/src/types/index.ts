@@ -14,12 +14,21 @@ export interface User {
   updatedAt: string;
 }
 
-export interface TicketImage {
-  filename: string;
+export interface TicketAttachment {
+  fileName: string;
   originalName: string;
   mimeType: string;
   size: number;
   url: string;
+  uploadedAt?: string;
+}
+
+export interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive?: boolean;
 }
 
 export interface Ticket {
@@ -27,34 +36,52 @@ export interface Ticket {
   ticketCode?: string;
   title: string;
   description: string;
-  category: string;
-  building: string;
-  room: string;
+  category: Category | string;
+  building?: string;
+  room?: string;
+  location: string;
   priority: TicketPriority;
   status: TicketStatus;
   reportedBy: User | string;
   assignedTo?: User | string | null;
-  images?: TicketImage[];
+  images?: TicketAttachment[];
   resolutionNote?: string;
+  resolvedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface Category {
-  _id: string;
-  name: string;
-  description?: string;
-  isActive: boolean;
 }
 
 export interface AuditLog {
   _id: string;
   ticketId: string;
-  actorId: User | string;
+  actorId: User;
   action: string;
   oldValue?: unknown;
   newValue?: unknown;
+  note?: string;
   createdAt: string;
+}
+
+export interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+export interface AdminOverview {
+  tickets: {
+    total: number;
+    open: number;
+    assigned: number;
+    inProgress: number;
+    resolved: number;
+    critical: number;
+  };
+  users: {
+    activeTechnicians: number;
+    activeStudents: number;
+  };
 }
 
 export interface ApiResponse<T = unknown> {
@@ -63,4 +90,3 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   errors?: Array<{ field: string; message: string }>;
 }
-
