@@ -29,8 +29,10 @@ export const setAccessToken = (token: string | null) => {
 
 export const getAccessToken = () => accessToken;
 
+const apiBase = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: apiBase,
   headers: {
     'Content-Type': 'application/json'
   },
@@ -88,7 +90,7 @@ api.interceptors.response.use(
         success: boolean;
         data: { token: string };
       }>(
-        `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/refresh`,
+        `${apiBase}/auth/refresh`,
         {},
         { withCredentials: true }
       );
