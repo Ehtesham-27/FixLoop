@@ -1,17 +1,34 @@
 # FixLoop: Responsive Campus Maintenance and Issue Management System
 
-FixLoop is a full-stack, responsive web application designed for universities and colleges to streamline facility issue reporting, technician task assignment, and maintenance resolution tracking.
+FixLoop is a production-ready, full-stack campus maintenance management platform built with the MERN stack (React 18 + TypeScript + Vite on frontend; Node.js + Express ES Modules + MongoDB Atlas on backend). It provides an intuitive, responsive web experience for students, technicians, and administrators to report, triage, assign, and resolve campus issues efficiently.
 
 ---
 
-## 1. Main Features
+## 1. Core Capabilities & Workflows
 
-- **Issue Reporting:** Students and faculty report maintenance issues with categories, building/room locations, priority indicators, and photo attachments.
-- **Role-based Portals:** Dedicated dashboards tailored for students, maintenance technicians, and campus administrators.
-- **Strict Ticket Lifecycle:** Automated state progression: `OPEN` → `ASSIGNED` → `IN_PROGRESS` → `RESOLVED`.
-- **Assignment & Prioritization:** Administrators review incoming reports, adjust priority levels, and assign work to technicians.
-- **Audit History:** Full tracking of assignment and status changes for accountability.
-- **Responsive Layout:** Optimized for mobile phones, tablets, and desktop workstations without duplicate mobile applications.
+- **Student Portal:**
+  - Campus issue reporting with live category selection, building, and room specification.
+  - Multi-image photo attachment support (JPEG, PNG, WebP up to 5MB) with client-side preview and remove actions.
+  - My Tickets dashboard with real-time status pills, priority indicators, and pagination.
+  - Detailed ticket view with complete activity timeline, technician resolution notes, and photo galleries.
+- **Technician Portal:**
+  - Dedicated assigned work queue (`GET /api/tickets/assigned`).
+  - Strict state-machine progression: `ASSIGNED` → `IN_PROGRESS` → `RESOLVED`.
+  - Mandatory resolution note entry (>= 5 characters) with automatic timestamping upon issue closure.
+- **Administrator Portal:**
+  - Real-time campus maintenance metrics (Total, Open, Assigned, In Progress, Resolved, Critical).
+  - Triage queue for unassigned issues (`OPEN` status).
+  - Complete campus ticket directory with filtering by status, priority, category, and text search.
+  - Active technician assignment and reassignment modals.
+  - Ticket priority escalation (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+  - Campus user directory with role badges and account statuses.
+- **Security & Reliability:**
+  - Bcrypt password hashing (work factor 12).
+  - Short-lived JWT access tokens (15m) paired with rotating `HttpOnly`, `SameSite=Strict` refresh cookies (7d).
+  - Automatic refresh token reuse detection and instant session revocation.
+  - Complete immutable audit logging (`AuditLog` collection) for every status transition and priority update.
+  - Anti-IDOR server-side ownership enforcement and NoSQL injection mitigation.
+  - Multi-layer file upload validation (MIME, extension, 5MB limit, randomized safe filenames).
 
 ---
 
@@ -20,246 +37,155 @@ FixLoop is a full-stack, responsive web application designed for universities an
 ### Frontend
 - **Framework:** React 18 with TypeScript
 - **Build Tool:** Vite
-- **Styling:** Tailwind CSS
-- **Routing:** React Router v6
-- **HTTP Client:** Axios
+- **Styling:** Tailwind CSS (calm, minimal campus utility aesthetic)
+- **Routing:** React Router v6 with role-based `ProtectedRoute` guards
+- **HTTP Client:** Axios with automated token refresh queue interceptor
 - **Icons:** Lucide React
 
 ### Backend
 - **Runtime:** Node.js (v20+ LTS)
 - **Framework:** Express.js (ES Modules)
-- **Database ODM:** Mongoose (MongoDB)
-- **Validation:** Zod
-- **Security:** Helmet, bcryptjs, jsonwebtoken, express-rate-limit, cors, cookie-parser
-- **File Handling:** Multer
+- **Database & ODM:** MongoDB Atlas via Mongoose 8
+- **Validation:** Zod schemas for request body, query, and params
+- **Security:** Helmet (CORP cross-origin), bcryptjs, jsonwebtoken, express-rate-limit, cors, cookie-parser
+- **File Upload:** Multer local disk storage with cryptographic hex naming
 
 ---
 
-## 3. User Roles
+## 3. Project Architecture & State Machine
 
-| Role | Responsibilities |
-|---|---|
-| **`STUDENT`** | Report campus facility problems, track status, view own tickets. |
-| **`TECHNICIAN`** | View assigned repair tasks, update task status, append resolution notes. |
-| **`ADMIN`** | View all tickets across campus, assign technicians, set priorities, manage users. |
-
----
-
-## 4. Repository Structure
-
-```text
-FixLoop/
-├── frontend/                     # React + TypeScript + Vite frontend
-│   ├── public/                   # Static assets (favicons, etc.)
-│   ├── src/
-│   │   ├── components/           # Reusable UI elements (common, layout, tickets, feedback)
-│   │   ├── context/              # Context providers (AuthContext)
-│   │   ├── hooks/                # Custom React hooks (useAuth)
-│   │   ├── layouts/              # App and Auth responsive layouts
-│   │   ├── pages/                # Role-specific and auth pages
-│   │   ├── routes/               # App routing and ProtectedRoute guard
-│   │   ├── services/             # Axios API service clients
-│   │   ├── styles/               # Tailwind CSS entry points
-│   │   ├── types/                # TypeScript shared interfaces
-│   │   └── utils/                # Date and text helper utilities
-│   ├── .env.example              # Frontend environment template
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-│
-├── backend/                      # Express.js backend (ES Modules)
-│   ├── src/
-│   │   ├── config/               # Database and environment configuration
-│   │   ├── constants/            # Roles, priorities, ticket statuses
-│   │   ├── controllers/          # Request handlers
-│   │   ├── middleware/           # Auth, error handling, rate-limiting, upload
-│   │   ├── models/               # Mongoose schemas (User, Ticket, Category, AuditLog)
-│   │   ├── routes/               # API route definitions
-│   │   ├── services/             # Business logic layer
-│   │   ├── utils/                # ApiError and async handler
-│   │   ├── validators/           # Zod schema validators
-│   │   ├── app.js                # Express app setup and middleware configuration
-│   │   └── server.js             # HTTP server bootstrap and graceful shutdown
-│   ├── uploads/                  # Uploaded ticket photos (.gitkeep)
-│   ├── .env.example              # Backend environment template
-│   └── package.json
-│
-├── docs/                         # Specifications & Architectural Documentation
-│   ├── REQUIREMENTS.md           # Product specification and MVP requirements
-│   ├── API.md                    # REST API endpoints and contracts
-│   ├── DATABASE.md               # MongoDB collections, schemas, and indexes
-│   ├── SECURITY.md               # Security controls, auth flow, and sanitization
-│   └── UI-UX.md                  # Layout guidelines and responsive design rules
-│
-├── .gitignore
-├── package.json                  # Root monorepo workspace configuration
-└── README.md                     # Project overview and setup instructions
+```
+   Student Reports Issue (OPEN)
+             │
+             ▼
+   Admin Assigns Technician ────────► Status: ASSIGNED
+             │
+             ▼
+   Assigned Tech Clicks "Start Work" ─► Status: IN_PROGRESS
+             │
+             ▼
+   Assigned Tech Resolves with Note ──► Status: RESOLVED (resolvedAt recorded)
 ```
 
----
-
-## 5. Prerequisites
-
-- **Node.js:** v20.x or higher LTS
-- **npm:** v10.x or higher
-- **MongoDB:** Local MongoDB Community Server running on `mongodb://127.0.0.1:27017` or MongoDB Atlas URI
+For in-depth architectural specifications, see [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md).
 
 ---
 
-## 6. Local Setup Instructions
+## 4. Documentation Index
 
-### 1. Clone the repository
+Comprehensive engineering documents are located in the [`docs/`](docs/) directory:
+
+- [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) — Product specifications, functional requirements, and phase milestones.
+- [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) — System design, layered architecture, data flows, and state machines.
+- [`docs/API.md`](docs/API.md) — Complete REST API contract, endpoints, request/response schemas, and error formats.
+- [`docs/DATABASE.md`](docs/DATABASE.md) — Mongoose schemas, compound indexes, relations, and idempotent seeder guide.
+- [`docs/SECURITY.md`](docs/SECURITY.md) — Defense-in-depth architecture, JWT rotation, IDOR defense, and sanitization.
+- [`docs/UI-UX.md`](docs/UI-UX.md) — Design system, color tokens, responsive breakpoints, and screen inventory.
+- [`docs/TESTING.md`](docs/TESTING.md) — Automated testing strategy, test suite breakdown (160 assertions), and E2E flow.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Production deployment guide for MongoDB Atlas, Render (backend), and Vercel (frontend).
+
+---
+
+## 5. Quickstart & Local Setup
+
+### Prerequisites
+- Node.js v20+ LTS
+- npm v10+
+- MongoDB Community Server running locally OR a MongoDB Atlas cluster URI
+
+### 1. Installation
+Clone the repository and install dependencies:
 ```bash
 git clone <repository-url>
 cd "Full Stack 2"
+
+# Install monorepo dependencies
+npm install --prefix backend
+npm install --prefix frontend
 ```
 
-### 2. Configure Environment Variables
-
-**Backend configuration:**
-Copy `backend/.env.example` to `backend/.env`:
-```bash
-cp backend/.env.example backend/.env
-```
-Ensure `backend/.env` has:
+### 2. Environment Configuration
+**Backend:**
+Copy `backend/.env.example` to `backend/.env` and supply your database connection and secrets:
 ```dotenv
 NODE_ENV=development
-PORT=5000
-MONGODB_URI=mongodb://127.0.0.1:27017/fixloop
+PORT=5001
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/fixloop?retryWrites=true&w=majority
 CLIENT_ORIGIN=http://localhost:5173
-JWT_ACCESS_SECRET=replace_with_a_long_random_secret
-JWT_REFRESH_SECRET=replace_with_another_long_random_secret
+JWT_ACCESS_SECRET=your_super_secret_access_key_min_32_chars
+JWT_REFRESH_SECRET=your_super_secret_refresh_key_min_32_chars
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 UPLOAD_DIR=uploads
 MAX_FILE_SIZE_MB=5
 ```
 
-**Frontend configuration:**
+**Frontend:**
 Copy `frontend/.env.example` to `frontend/.env`:
-```bash
-cp frontend/.env.example frontend/.env
-```
-Ensure `frontend/.env` has:
 ```dotenv
-VITE_API_BASE_URL=http://localhost:5000/api
+VITE_API_BASE_URL=http://localhost:5001/api
 ```
 
-### 3. Install Dependencies
-
-You can install all dependencies from the root monorepo:
+### 3. Database Seeding
+Seed initial maintenance categories and optional administrative accounts:
 ```bash
-# Install backend dependencies
-npm install --prefix backend
-
-# Install frontend dependencies
-npm install --prefix frontend
+npm run seed:backend
 ```
 
-### 4. Database Setup & Seeding
-
-FixLoop connects to MongoDB using the `MONGODB_URI` environment variable.
-
-1. **Start MongoDB:**
-   - **Local MongoDB Community Server:** Ensure MongoDB service is running on `mongodb://127.0.0.1:27017/fixloop`.
-   - **MongoDB Atlas:** Obtain your cluster connection string and paste it into `backend/.env` under `MONGODB_URI`.
-
-2. **Verify Database Models & Validation:**
-   ```bash
-   npm run test:db
-   ```
-
-3. **Seed Maintenance Categories & Initial Accounts:**
-   - **Standard Seeding:** Seeds all 8 campus categories and any configured initial admin/technician accounts from `.env`:
-     ```bash
-     npm run seed:backend
-     ```
-   - **Interactive Seeding:** Prompts for administrator and technician credentials securely in the terminal (passwords are automatically hashed with bcrypt):
-     ```bash
-     npm run seed:backend:interactive
-     ```
-   *(Note: The seeder is idempotent. Re-running it will never create duplicate categories or overwrite existing account credentials).*
-
----
-
-## 7. How to Run Frontend and Backend
-
-### Running Backend (Development)
+### 4. Running Development Servers
+Start both servers simultaneously in separate terminals:
 ```bash
-npm run dev --prefix backend
-```
-The backend server runs on `http://localhost:5000`.
+# Terminal 1: Backend API (runs on http://localhost:5001)
+npm run dev:backend
 
-### Running Frontend (Development)
-```bash
-npm run dev --prefix frontend
-```
-The frontend application runs on `http://localhost:5173`.
-
-### Type-checking and Building
-```bash
-# Run backend syntax check
-npm run check --prefix backend
-
-# Run frontend typecheck
-npm run typecheck --prefix frontend
-
-# Build frontend production bundle
-npm run build --prefix frontend
+# Terminal 2: Frontend Client (runs on http://localhost:5173)
+npm run dev:frontend
 ```
 
 ---
 
-## 8. API Health Check
+## 6. Automated Testing & Verification
 
-Verify that the backend is running and view database connectivity status:
+FixLoop includes 5 automated backend integration suites (running against live MongoDB) and full frontend quality checks:
+
 ```bash
-curl http://localhost:5000/api/health
-```
-Response when connected to MongoDB:
-```json
-{
-  "status": "ok",
-  "service": "FixLoop API",
-  "uptime": 12.34,
-  "timestamp": "2026-11-01T14:15:00.000Z",
-  "database": "connected"
-}
-```
-Response when database is offline/unreachable:
-```json
-{
-  "status": "degraded",
-  "service": "FixLoop API",
-  "uptime": 12.34,
-  "timestamp": "2026-11-01T14:15:00.000Z",
-  "database": "disconnected"
-}
+# Run all automated backend tests (160 assertions)
+npm test
+
+# Run individual test suites
+npm run test:db        # Database schemas, compound indexes, & connection
+npm run test:auth      # Student registration, login, JWT rotation, & RBAC
+npm run test:tickets   # Ticket workflow, state machine, ownership, & audit
+npm run test:upload    # Multer photo upload, size & MIME type validation
+npm run test:e2e       # Full 12-step multi-role end-to-end scenario
+
+# Run frontend checks
+npm run typecheck      # TypeScript static type check (tsc --noEmit)
+npm run lint           # ESLint code quality check
+npm run build          # Production Vite bundle build
 ```
 
 ---
 
-## 9. Security Notes
+## 7. User Roles Matrix
 
-- Never commit `.env` or secrets to version control.
-- Passwords are encrypted using `bcryptjs` with salt rounds.
-- Authorization and status transitions are validated authoritatively on the backend.
-- Image uploads use secure random hashes for naming and are validated for MIME type and file size.
-- API endpoints are protected with Helmet security headers and rate-limiting.
+| Feature / Action | Student | Technician | Administrator |
+|---|:---:|:---:|:---:|
+| Register account | Self-registration | Admin created | Admin / Seeded |
+| Report issue with photos | Yes | No | Yes |
+| View own reported tickets | Yes | No | Yes |
+| View assigned tickets | No | Yes (assigned only) | Yes (all) |
+| View global campus queue | No | No | Yes |
+| Assign / Reassign staff | No | No | Yes |
+| Change ticket priority | No | No | Yes |
+| Start work (`IN_PROGRESS`) | No | Yes (if assigned) | Yes |
+| Resolve ticket with notes | No | Yes (if assigned) | Yes |
+| View user directory | No | No | Yes |
+| View campus analytics | No | No | Yes |
 
 ---
 
-## 10. Screenshots (Placeholders)
+## 8. License
 
-| Student Dashboard | Technician Work Queue | Admin Management |
-|:---:|:---:|:---:|
-| *(Screenshot coming soon)* | *(Screenshot coming soon)* | *(Screenshot coming soon)* |
-
----
-
-## 11. Team & Authors
-
-- **Student Developer:** College Full Stack Project Team
-- **Course:** Full Stack Web Development (5th Semester)
-- **License:** ISC
-
+Developed for the Campus Maintenance and Issue Management System project.  
+License: ISC

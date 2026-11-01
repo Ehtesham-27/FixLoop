@@ -12,6 +12,7 @@ Stores user identities, credentials, and roles.
 - `passwordHash`: String, required, select: false (hidden by default)
 - `role`: String enum (`['STUDENT', 'TECHNICIAN', 'ADMIN']`), default: `STUDENT`
 - `isActive`: Boolean, default: true
+- `refreshTokens`: Array of `{ tokenHash: String, expiresAt: Date, createdAt: Date }`, select: false (SHA-256 hashed rotation tokens)
 - `createdAt`: Date (timestamp)
 - `updatedAt`: Date (timestamp)
 
