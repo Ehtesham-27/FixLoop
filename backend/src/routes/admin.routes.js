@@ -13,6 +13,7 @@ router.use(authenticate, authorize(ROLES.ADMIN));
 
 router.get('/users', adminController.getAdminUsers);
 router.get('/overview', adminController.getAdminOverview);
+router.get('/sla-overview', adminController.getAdminSlaOverview);
 router.post('/technicians', validate(createTechnicianSchema), adminController.createTechnician);
 
 export default router;

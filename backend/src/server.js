@@ -12,6 +12,17 @@ async function startServer() {
     // Attempt database connection
     await connectDatabase();
 
+    // Idempotent SLA backfill for legacy tickets
+    try {
+      const { backfillLegacySlaTickets } = await import('./utils/sla-backfill.js');
+      const count = await backfillLegacySlaTickets();
+      if (count > 0) {
+        console.log(`[FixLoop SLA] Backfilled ${count} legacy tickets with SLA deadlines`);
+      }
+    } catch (backfillErr) {
+      console.warn(`[FixLoop SLA] Non-fatal notice during backfill: ${backfillErr.message}`);
+    }
+
     server = app.listen(env.PORT, () => {
       console.log(`[FixLoop API] Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
       console.log(`[FixLoop API] Health check available at: http://localhost:${env.PORT}/api/health`);

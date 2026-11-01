@@ -11,6 +11,7 @@ export const MyTicketsPage: React.FC = () => {
   const [pagination, setPagination] = useState<IPagination>({ total: 0, page: 1, limit: 10, pages: 0 });
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+  const [slaStatusFilter, setSlaStatusFilter] = useState<string>('ALL');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
@@ -23,7 +24,8 @@ export const MyTicketsPage: React.FC = () => {
         page,
         limit: 10,
         status: statusFilter,
-        priority: priorityFilter
+        priority: priorityFilter,
+        slaStatus: slaStatusFilter
       })
       .then((data) => {
         setTickets(data.tickets);
@@ -41,7 +43,7 @@ export const MyTicketsPage: React.FC = () => {
   useEffect(() => {
     fetchTickets(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, priorityFilter]);
+  }, [statusFilter, priorityFilter, slaStatusFilter]);
 
   return (
     <div className="space-y-6">
@@ -90,6 +92,19 @@ export const MyTicketsPage: React.FC = () => {
             <option value="MEDIUM">Medium</option>
             <option value="HIGH">High</option>
             <option value="CRITICAL">Critical</option>
+          </select>
+
+          <select
+            value={slaStatusFilter}
+            onChange={(e) => setSlaStatusFilter(e.target.value)}
+            className="text-xs border border-slate-300 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">All SLA Statuses</option>
+            <option value="ON_TRACK">On Track</option>
+            <option value="AT_RISK">At Risk</option>
+            <option value="OVERDUE">Overdue</option>
+            <option value="RESOLVED_ON_TIME">Resolved On Time</option>
+            <option value="RESOLVED_LATE">Resolved Late</option>
           </select>
         </div>
       </div>

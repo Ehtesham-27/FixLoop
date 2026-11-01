@@ -1,4 +1,4 @@
-import { TicketPriority, TicketStatus, UserRole } from '../types';
+import { SlaStatus, TicketPriority, TicketStatus, UserRole } from '../types';
 
 export const USER_ROLES: Record<UserRole, UserRole> = {
   STUDENT: 'STUDENT',
@@ -32,5 +32,20 @@ export const PRIORITY_COLORS: Record<TicketPriority, string> = {
   MEDIUM: 'bg-blue-50 text-blue-700 border-blue-200',
   HIGH: 'bg-orange-100 text-orange-800 border-orange-200',
   CRITICAL: 'bg-rose-100 text-rose-800 border-rose-200'
+};
+
+export const SLA_TARGET_HOURS: Record<TicketPriority, number> = {
+  CRITICAL: 2,
+  HIGH: 8,
+  MEDIUM: 24,
+  LOW: 72
+};
+
+export const SLA_STATUS_COLORS: Record<SlaStatus, string> = {
+  ON_TRACK: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  AT_RISK: 'bg-amber-50 text-amber-700 border-amber-200',
+  OVERDUE: 'bg-rose-50 text-rose-700 border-rose-200',
+  RESOLVED_ON_TIME: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  RESOLVED_LATE: 'bg-rose-50 text-rose-700 border-rose-200'
 };
 

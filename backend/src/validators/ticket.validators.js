@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PRIORITY_LIST } from '../constants/priorities.js';
 import { TICKET_STATUS_LIST } from '../constants/ticket-status.js';
+import { SLA_STATUS_LIST } from '../constants/sla.js';
 
 export const createTicketSchema = z.object({
   body: z
@@ -54,7 +55,8 @@ export const ticketQuerySchema = z.object({
     status: z.enum(TICKET_STATUS_LIST).optional(),
     priority: z.enum(PRIORITY_LIST).optional(),
     category: z.string().optional(),
-    search: z.string().optional()
+    search: z.string().optional(),
+    slaStatus: z.enum(SLA_STATUS_LIST).optional()
   }).optional()
 });
 

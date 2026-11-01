@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { PRIORITIES, PRIORITY_LIST } from '../constants/priorities.js';
 import { TICKET_STATUS, TICKET_STATUS_LIST } from '../constants/ticket-status.js';
+import { SLA_TARGETS } from '../constants/sla.js';
 
 const attachmentSchema = new mongoose.Schema(
   {
@@ -103,6 +104,18 @@ const ticketSchema = new mongoose.Schema(
     resolvedAt: {
       type: Date,
       default: null
+    },
+    slaTargetHours: {
+      type: Number,
+      default: null
+    },
+    dueAt: {
+      type: Date,
+      default: null
+    },
+    slaBreachedAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -131,6 +144,15 @@ ticketSchema.pre('validate', function (next) {
     this.ticketCode = `FL-${randomSuffix}`;
   }
 
+  // Calculate default SLA fields if not explicitly assigned
+  if (!this.slaTargetHours) {
+    this.slaTargetHours = SLA_TARGETS[this.priority] || SLA_TARGETS[PRIORITIES.MEDIUM];
+  }
+  if (!this.dueAt) {
+    const baseTime = this.createdAt ? new Date(this.createdAt).getTime() : Date.now();
+    this.dueAt = new Date(baseTime + this.slaTargetHours * 60 * 60 * 1000);
+  }
+
   next();
 });
 
@@ -139,5 +161,6 @@ ticketSchema.index({ reportedBy: 1, createdAt: -1 });
 ticketSchema.index({ assignedTo: 1, status: 1, createdAt: -1 });
 ticketSchema.index({ status: 1, priority: 1, createdAt: -1 });
 ticketSchema.index({ category: 1, createdAt: -1 });
+ticketSchema.index({ dueAt: 1, status: 1 });
 
 export const Ticket = mongoose.model('Ticket', ticketSchema);

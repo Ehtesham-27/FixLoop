@@ -6,8 +6,10 @@ import { AUDIT_ACTIONS } from '../models/AuditLog.js';
 import { ROLES } from '../constants/roles.js';
 import { TICKET_STATUS, ALLOWED_STATUS_TRANSITIONS } from '../constants/ticket-status.js';
 import { PRIORITIES, PRIORITY_LIST } from '../constants/priorities.js';
+import { SLA_STATUS } from '../constants/sla.js';
 import { ApiError } from '../utils/ApiError.js';
 import { auditService } from './audit.service.js';
+import { slaService } from './sla.service.js';
 
 export const ticketService = {
   /**
@@ -56,6 +58,10 @@ export const ticketService = {
       priority = ticketData.priority;
     }
 
+    // Calculate SLA target hours and resolution deadline
+    const slaTargetHours = slaService.getSlaTargetHours(priority);
+    const dueAt = slaService.calculateDueAt(Date.now(), priority);
+
     const ticket = new Ticket({
       title: ticketData.title.trim(),
       description: ticketData.description.trim(),
@@ -67,7 +73,9 @@ export const ticketService = {
       status: TICKET_STATUS.OPEN,
       reportedBy: reporterUser._id,
       assignedTo: null,
-      images: Array.isArray(ticketData.images) ? ticketData.images : []
+      images: Array.isArray(ticketData.images) ? ticketData.images : [],
+      slaTargetHours,
+      dueAt
     });
 
     await ticket.save();
@@ -81,16 +89,20 @@ export const ticketService = {
       newValue: {
         status: ticket.status,
         priority: ticket.priority,
-        category: category.name
+        category: category.name,
+        slaTargetHours,
+        dueAt
       },
       note: 'Ticket created by student reporter'
     });
 
-    return ticket.populate([
+    const populated = await ticket.populate([
       { path: 'category', select: 'name slug description' },
       { path: 'reportedBy', select: 'name email role' },
       { path: 'assignedTo', select: 'name email role' }
     ]);
+
+    return slaService.enrichTicket(populated);
   },
 
   /**
@@ -117,6 +129,10 @@ export const ticketService = {
         if (cat) filter.category = cat._id;
       }
     }
+    if (query.slaStatus) {
+      const slaFilter = slaService.buildSlaFilter(query.slaStatus);
+      Object.assign(filter, slaFilter);
+    }
 
     const [tickets, total] = await Promise.all([
       Ticket.find(filter)
@@ -129,7 +145,7 @@ export const ticketService = {
     ]);
 
     return {
-      tickets,
+      tickets: slaService.enrichTickets(tickets),
       pagination: {
         total,
         page,
@@ -155,6 +171,10 @@ export const ticketService = {
     if (query.priority) {
       filter.priority = query.priority;
     }
+    if (query.slaStatus) {
+      const slaFilter = slaService.buildSlaFilter(query.slaStatus);
+      Object.assign(filter, slaFilter);
+    }
 
     const [tickets, total] = await Promise.all([
       Ticket.find(filter)
@@ -167,7 +187,7 @@ export const ticketService = {
     ]);
 
     return {
-      tickets,
+      tickets: slaService.enrichTickets(tickets),
       pagination: {
         total,
         page,
@@ -209,6 +229,15 @@ export const ticketService = {
         { ticketCode: { $regex: sanitized, $options: 'i' } }
       ];
     }
+    if (query.slaStatus) {
+      const slaFilter = slaService.buildSlaFilter(query.slaStatus);
+      if (filter.$or && slaFilter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: slaFilter.$or }];
+        delete filter.$or;
+        delete slaFilter.$or;
+      }
+      Object.assign(filter, slaFilter);
+    }
 
     const [tickets, total] = await Promise.all([
       Ticket.find(filter)
@@ -222,7 +251,7 @@ export const ticketService = {
     ]);
 
     return {
-      tickets,
+      tickets: slaService.enrichTickets(tickets),
       pagination: {
         total,
         page,
@@ -262,7 +291,7 @@ export const ticketService = {
       }
     }
 
-    return ticket;
+    return slaService.enrichTicket(ticket);
   },
 
   /**
@@ -325,11 +354,13 @@ export const ticketService = {
       });
     }
 
-    return ticket.populate([
+    const populated = await ticket.populate([
       { path: 'category', select: 'name slug' },
       { path: 'reportedBy', select: 'name email role' },
       { path: 'assignedTo', select: 'name email role' }
     ]);
+
+    return slaService.enrichTicket(populated);
   },
 
   /**
@@ -378,6 +409,13 @@ export const ticketService = {
       }
       ticket.resolutionNote = resolutionNote.trim();
       ticket.resolvedAt = new Date();
+      if (!ticket.dueAt) {
+        ticket.dueAt = slaService.deriveDueAt(ticket);
+        ticket.slaTargetHours = ticket.slaTargetHours || slaService.getSlaTargetHours(ticket.priority);
+      }
+      if (ticket.resolvedAt.getTime() > ticket.dueAt.getTime() && !ticket.slaBreachedAt) {
+        ticket.slaBreachedAt = ticket.dueAt;
+      }
     } else if (resolutionNote) {
       ticket.resolutionNote = resolutionNote.trim();
     }
@@ -406,11 +444,13 @@ export const ticketService = {
       });
     }
 
-    return ticket.populate([
+    const populated = await ticket.populate([
       { path: 'category', select: 'name slug' },
       { path: 'reportedBy', select: 'name email role' },
       { path: 'assignedTo', select: 'name email role' }
     ]);
+
+    return slaService.enrichTicket(populated);
   },
 
   /**
@@ -434,29 +474,59 @@ export const ticketService = {
       throw ApiError.notFound('Ticket not found');
     }
 
-    const oldPriority = ticket.priority;
-    if (oldPriority === newPriority) {
-      return ticket;
+    if (ticket.status === TICKET_STATUS.RESOLVED) {
+      throw ApiError.badRequest('Cannot change priority on a resolved ticket');
     }
 
+    const oldPriority = ticket.priority;
+    const oldTargetHours = ticket.slaTargetHours || slaService.getSlaTargetHours(oldPriority);
+    const oldDueAt = ticket.dueAt || slaService.deriveDueAt(ticket);
+
+    if (oldPriority === newPriority) {
+      const populated = await ticket.populate([
+        { path: 'category', select: 'name slug' },
+        { path: 'reportedBy', select: 'name email role' },
+        { path: 'assignedTo', select: 'name email role' }
+      ]);
+      return slaService.enrichTicket(populated);
+    }
+
+    // Recalculate deadline from priority change timestamp, preserving original createdAt
+    const changeTimestamp = Date.now();
+    const newTargetHours = slaService.getSlaTargetHours(newPriority);
+    const newDueAt = slaService.calculateDueAt(changeTimestamp, newPriority);
+
     ticket.priority = newPriority;
+    ticket.slaTargetHours = newTargetHours;
+    ticket.dueAt = newDueAt;
+
     await ticket.save();
 
-    // Audit logging
+    // Audit logging with previous & new priority and deadlines
     await auditService.logAction({
       ticketId: ticket._id,
       actorId: adminUser._id,
       action: AUDIT_ACTIONS.PRIORITY_CHANGED,
-      oldValue: oldPriority,
-      newValue: newPriority,
-      note: `Priority changed from ${oldPriority} to ${newPriority}`
+      oldValue: {
+        priority: oldPriority,
+        slaTargetHours: oldTargetHours,
+        dueAt: oldDueAt
+      },
+      newValue: {
+        priority: newPriority,
+        slaTargetHours: newTargetHours,
+        dueAt: newDueAt
+      },
+      note: `Priority changed from ${oldPriority} to ${newPriority} (SLA target: ${newTargetHours}h, new deadline: ${newDueAt.toISOString()})`
     });
 
-    return ticket.populate([
+    const populated = await ticket.populate([
       { path: 'category', select: 'name slug' },
       { path: 'reportedBy', select: 'name email role' },
       { path: 'assignedTo', select: 'name email role' }
     ]);
+
+    return slaService.enrichTicket(populated);
   },
 
   /**
@@ -505,6 +575,45 @@ export const ticketService = {
         activeTechnicians: totalTechnicians,
         activeStudents: totalStudents
       }
+    };
+  },
+
+  /**
+   * Admin SLA Overview metrics.
+   */
+  async getAdminSlaOverview() {
+    const now = new Date();
+
+    const [
+      totalUnresolved,
+      onTrack,
+      atRisk,
+      overdue,
+      resolvedOnTime,
+      resolvedLate
+    ] = await Promise.all([
+      Ticket.countDocuments({ status: { $ne: TICKET_STATUS.RESOLVED } }),
+      Ticket.countDocuments(slaService.buildSlaFilter(SLA_STATUS.ON_TRACK, now)),
+      Ticket.countDocuments(slaService.buildSlaFilter(SLA_STATUS.AT_RISK, now)),
+      Ticket.countDocuments(slaService.buildSlaFilter(SLA_STATUS.OVERDUE, now)),
+      Ticket.countDocuments(slaService.buildSlaFilter(SLA_STATUS.RESOLVED_ON_TIME, now)),
+      Ticket.countDocuments(slaService.buildSlaFilter(SLA_STATUS.RESOLVED_LATE, now))
+    ]);
+
+    const totalEvaluated = onTrack + atRisk + overdue + resolvedOnTime + resolvedLate;
+    const totalCompliant = onTrack + atRisk + resolvedOnTime;
+    const complianceRate = totalEvaluated > 0
+      ? Math.round((totalCompliant / totalEvaluated) * 1000) / 10
+      : 100.0;
+
+    return {
+      totalUnresolved,
+      onTrack,
+      atRisk,
+      overdue,
+      resolvedOnTime,
+      resolvedLate,
+      complianceRate
     };
   }
 };

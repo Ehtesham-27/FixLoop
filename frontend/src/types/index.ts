@@ -4,6 +4,13 @@ export type TicketStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED';
 
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
+export type SlaStatus =
+  | 'ON_TRACK'
+  | 'AT_RISK'
+  | 'OVERDUE'
+  | 'RESOLVED_ON_TIME'
+  | 'RESOLVED_LATE';
+
 export interface User {
   _id: string;
   name: string;
@@ -47,6 +54,12 @@ export interface Ticket {
   images?: TicketAttachment[];
   resolutionNote?: string;
   resolvedAt?: string | null;
+  slaTargetHours?: number;
+  dueAt?: string;
+  slaBreachedAt?: string | null;
+  slaStatus?: SlaStatus;
+  remainingMilliseconds?: number;
+  isOverdue?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,6 +95,16 @@ export interface AdminOverview {
     activeTechnicians: number;
     activeStudents: number;
   };
+}
+
+export interface SlaOverview {
+  totalUnresolved: number;
+  onTrack: number;
+  atRisk: number;
+  overdue: number;
+  resolvedOnTime: number;
+  resolvedLate: number;
+  complianceRate: number;
 }
 
 export interface ApiResponse<T = unknown> {

@@ -20,6 +20,8 @@ import { Ticket, AuditLog, User as UserType, TicketPriority } from '../../types'
 import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 import { STATUS_COLORS, PRIORITY_COLORS } from '../../constants';
 import { formatDate } from '../../utils';
+import { SlaBadge } from '../../components/sla/SlaBadge';
+import { SlaCountdown } from '../../components/sla/SlaCountdown';
 
 export const TicketDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -327,6 +329,68 @@ export const TicketDetailPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Dedicated SLA Target & Resolution Tracking */}
+            <div className="border border-slate-200/90 rounded-xl p-5 bg-gradient-to-b from-white to-slate-50/40 space-y-4 shadow-2xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Service Level Agreement (SLA) & Deadline</h3>
+                    <p className="text-[11px] text-slate-500">Official campus facility resolution targets</p>
+                  </div>
+                </div>
+                {ticket.slaStatus && <SlaBadge status={ticket.slaStatus} />}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                <div className="bg-white p-3 rounded-lg border border-slate-200/70">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5 tracking-wider">
+                    Target Window
+                  </span>
+                  <span className="text-sm font-bold text-slate-900">
+                    {ticket.slaTargetHours || (ticket.priority === 'CRITICAL' ? 2 : ticket.priority === 'HIGH' ? 8 : ticket.priority === 'LOW' ? 72 : 24)} Hours
+                  </span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">{ticket.priority} priority target</span>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-slate-200/70">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5 tracking-wider">
+                    Resolution Deadline
+                  </span>
+                  <span className="text-sm font-bold text-slate-900">
+                    {ticket.dueAt ? formatDate(ticket.dueAt) : 'Pending derivation'}
+                  </span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">Calculated by campus SLA</span>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-slate-200/70">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5 tracking-wider">
+                    SLA Status
+                  </span>
+                  <span className="text-sm font-bold text-slate-900">
+                    {ticket.slaStatus ? ticket.slaStatus.replace(/_/g, ' ') : 'ON TRACK'}
+                  </span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">Authoritative status</span>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-slate-200/70">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5 tracking-wider">
+                    Time Assessment
+                  </span>
+                  <div className="text-sm font-bold mt-0.5">
+                    <SlaCountdown
+                      dueAt={ticket.dueAt}
+                      status={ticket.status}
+                      resolvedAt={ticket.resolvedAt}
+                    />
+                  </div>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">Live timer</span>
+                </div>
+              </div>
+            </div>
+
             {/* Description */}
             <div>
               <h3 className="text-sm font-semibold text-slate-900 mb-2">Issue Description</h3>
@@ -460,12 +524,27 @@ export const TicketDetailPage: React.FC = () => {
                   const actorName = actor ? actor.name : 'System';
                   const actorRole = actor ? actor.role : '';
 
-                  const formattedChange =
-                    entry.oldValue && entry.newValue
-                      ? `${String(entry.oldValue)} → ${String(entry.newValue)}`
-                      : entry.newValue
-                      ? String(entry.newValue)
-                      : '';
+                  let formattedChange = '';
+                  if (entry.note) {
+                    formattedChange = entry.note;
+                  } else if (
+                    typeof entry.oldValue === 'object' &&
+                    typeof entry.newValue === 'object' &&
+                    entry.oldValue &&
+                    entry.newValue
+                  ) {
+                    const oldP = (entry.oldValue as Record<string, unknown>)?.priority;
+                    const newP = (entry.newValue as Record<string, unknown>)?.priority;
+                    if (oldP && newP) {
+                      formattedChange = `${String(oldP)} → ${String(newP)}`;
+                    } else {
+                      formattedChange = JSON.stringify(entry.newValue);
+                    }
+                  } else if (entry.oldValue && entry.newValue) {
+                    formattedChange = `${String(entry.oldValue)} → ${String(entry.newValue)}`;
+                  } else if (entry.newValue) {
+                    formattedChange = String(entry.newValue);
+                  }
 
                   return (
                     <div key={entry._id} className="relative">
