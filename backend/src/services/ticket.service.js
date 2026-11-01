@@ -66,7 +66,8 @@ export const ticketService = {
       priority,
       status: TICKET_STATUS.OPEN,
       reportedBy: reporterUser._id,
-      assignedTo: null
+      assignedTo: null,
+      images: Array.isArray(ticketData.images) ? ticketData.images : []
     });
 
     await ticket.save();

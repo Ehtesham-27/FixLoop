@@ -2,7 +2,32 @@ import { ticketService } from '../services/ticket.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 export const createTicket = asyncHandler(async (req, res) => {
-  const ticket = await ticketService.createTicket(req.body, req.user);
+  const uploadedFiles = [];
+  if (req.files) {
+    if (Array.isArray(req.files)) {
+      uploadedFiles.push(...req.files);
+    } else {
+      if (req.files.images) uploadedFiles.push(...req.files.images);
+      if (req.files.image) uploadedFiles.push(...req.files.image);
+    }
+  } else if (req.file) {
+    uploadedFiles.push(req.file);
+  }
+
+  const images = uploadedFiles.map((f) => ({
+    fileName: f.filename,
+    originalName: f.originalname,
+    mimeType: f.mimetype,
+    size: f.size,
+    url: `/uploads/${f.filename}`
+  }));
+
+  const ticketData = {
+    ...req.body,
+    images: images.length > 0 ? images : req.body.images || []
+  };
+
+  const ticket = await ticketService.createTicket(ticketData, req.user);
 
   res.status(201).json({
     success: true,

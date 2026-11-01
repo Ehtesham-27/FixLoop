@@ -11,7 +11,6 @@ import {
   History,
   SlidersHorizontal,
   X,
-  FileText,
   Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -336,32 +335,49 @@ export const TicketDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Images (if any) */}
+            {/* Attached Photos */}
             {ticket.images && ticket.images.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-2">Attached Photos & Media</h3>
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Attached Photos ({ticket.images.length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {ticket.images.map((att, idx) => (
                     <div
                       key={idx}
-                      className="border border-slate-200 rounded-lg p-3 bg-white flex items-center gap-3"
+                      className="group border border-slate-200 rounded-xl overflow-hidden bg-slate-50 flex flex-col transition hover:shadow-xs"
                     >
-                      {att.mimeType && att.mimeType.startsWith('image/') ? (
-                        <ImageIcon className="h-6 w-6 text-blue-500 shrink-0" />
-                      ) : (
-                        <FileText className="h-6 w-6 text-slate-400 shrink-0" />
-                      )}
-                      <div className="overflow-hidden">
-                        <a
-                          href={att.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-medium text-blue-600 hover:underline truncate block"
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative block h-40 bg-slate-100 overflow-hidden"
+                      >
+                        <img
+                          src={att.url}
+                          alt={att.originalName}
+                          onError={(e) => {
+                            // Image load failure fallback
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const fallback = target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                        />
+                        <div
+                          style={{ display: 'none' }}
+                          className="w-full h-full flex-col items-center justify-center p-3 text-center bg-slate-100 text-slate-400"
                         >
+                          <ImageIcon className="h-8 w-8 mb-1" />
+                          <span className="text-[11px]">Preview unavailable</span>
+                        </div>
+                      </a>
+
+                      <div className="p-2.5 bg-white border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span className="truncate text-slate-700 font-medium max-w-[140px]" title={att.originalName}>
                           {att.originalName}
-                        </a>
-                        <span className="text-[10px] text-slate-400">
-                          {(att.size / 1024).toFixed(1)} KB
+                        </span>
+                        <span className="text-[10px] text-slate-400 shrink-0">
+                          {(att.size / 1024).toFixed(0)} KB
                         </span>
                       </div>
                     </div>

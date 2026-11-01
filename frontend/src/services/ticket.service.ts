@@ -58,16 +58,21 @@ export const ticketService = {
     return res.data.data?.ticket || null;
   },
 
-  async createTicket(ticketData: {
-    title: string;
-    description: string;
-    category: string;
-    location?: string;
-    building?: string;
-    room?: string;
-    priority?: string;
-  }) {
-    const res = await api.post<ApiResponse<{ ticket: Ticket }>>('/tickets', ticketData);
+  async createTicket(
+    ticketData:
+      | FormData
+      | {
+          title: string;
+          description: string;
+          category: string;
+          location?: string;
+          building?: string;
+          room?: string;
+          priority?: string;
+        }
+  ) {
+    const headers = ticketData instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined;
+    const res = await api.post<ApiResponse<{ ticket: Ticket }>>('/tickets', ticketData, { headers });
     return res.data.data?.ticket;
   },
 

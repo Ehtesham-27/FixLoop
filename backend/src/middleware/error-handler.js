@@ -31,6 +31,16 @@ export function errorHandler(err, req, res, next) { // eslint-disable-line no-un
     errors = [{ field, message: `${field} already exists` }];
   }
 
+  // Handle Multer upload errors
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = `File too large. Maximum permitted size is ${env.MAX_FILE_SIZE_MB || 5}MB`;
+    } else {
+      message = `File upload error: ${err.message}`;
+    }
+  }
+
   // Handle JWT errors
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;

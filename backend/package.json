@@ -13,7 +13,8 @@
     "test:db": "node tests/db.test.js",
     "test:auth": "node tests/auth.test.js",
     "test:tickets": "node tests/ticket.test.js",
-    "test": "node tests/db.test.js && node tests/auth.test.js && node tests/ticket.test.js"
+    "test:upload": "node tests/upload.test.js",
+    "test": "node tests/db.test.js && node tests/auth.test.js && node tests/ticket.test.js && node tests/upload.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
