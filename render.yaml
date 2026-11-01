@@ -1,16 +1,15 @@
 services:
   - type: web
-    name: fixloop-backend
+    name: fixloop-api
     env: node
     plan: free
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: MONGODB_URI
         sync: false
       - key: CLIENT_ORIGIN
@@ -27,4 +26,9 @@ services:
         value: uploads
       - key: MAX_FILE_SIZE_MB
         value: 5
-
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
