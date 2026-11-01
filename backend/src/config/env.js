@@ -27,7 +27,14 @@ const envSchema = {
 
   INITIAL_TECH_NAME: process.env.INITIAL_TECH_NAME || '',
   INITIAL_TECH_EMAIL: process.env.INITIAL_TECH_EMAIL ? process.env.INITIAL_TECH_EMAIL.trim().toLowerCase() : '',
-  INITIAL_TECH_PASSWORD: process.env.INITIAL_TECH_PASSWORD || ''
+  INITIAL_TECH_PASSWORD: process.env.INITIAL_TECH_PASSWORD || '',
+
+  // Cloudinary credentials (required in production on Render for persistent image storage)
+  // When absent, upload falls back to local disk storage (development mode).
+  // Sign up at https://cloudinary.com/ to obtain these values.
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || ''
 };
 
 export function validateEnv() {
@@ -36,7 +43,10 @@ export function validateEnv() {
       'MONGODB_URI',
       'JWT_ACCESS_SECRET',
       'JWT_REFRESH_SECRET',
-      'CLIENT_ORIGIN'
+      'CLIENT_ORIGIN',
+      'CLOUDINARY_CLOUD_NAME',
+      'CLOUDINARY_API_KEY',
+      'CLOUDINARY_API_SECRET'
     ];
     const missing = requiredInProd.filter(
       (key) => !process.env[key] || process.env[key].startsWith('dev_') || process.env[key].startsWith('replace_')

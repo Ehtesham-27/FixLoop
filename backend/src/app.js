@@ -56,7 +56,10 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
-// Static uploads directory
+// Static uploads directory (used in local development when Cloudinary is not configured).
+// In production on Render, images are served directly from Cloudinary CDN via the
+// secure_url stored in the Ticket.images[].url field. This route is a no-op in production
+// because the ephemeral filesystem will not have any uploaded files.
 app.use('/uploads', express.static(path.resolve(__dirname, '../', env.UPLOAD_DIR)));
 
 // Health check endpoint

@@ -1,5 +1,6 @@
 import { ticketService } from '../services/ticket.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import { cloudinaryConfigured, uploadBufferToCloudinary } from '../config/cloudinary.js';
 
 export const createTicket = asyncHandler(async (req, res) => {
   const uploadedFiles = [];
@@ -14,13 +15,30 @@ export const createTicket = asyncHandler(async (req, res) => {
     uploadedFiles.push(req.file);
   }
 
-  const images = uploadedFiles.map((f) => ({
-    fileName: f.filename,
-    originalName: f.originalname,
-    mimeType: f.mimetype,
-    size: f.size,
-    url: `/uploads/${f.filename}`
-  }));
+  let images;
+
+  if (cloudinaryConfigured && uploadedFiles.length > 0) {
+    // Upload each buffer to Cloudinary; store the persistent secure_url
+    const cloudinaryResults = await Promise.all(
+      uploadedFiles.map((f) => uploadBufferToCloudinary(f.buffer, f.originalname, f.mimetype))
+    );
+    images = cloudinaryResults.map((result, i) => ({
+      fileName: result.public_id,
+      originalName: uploadedFiles[i].originalname,
+      mimeType: uploadedFiles[i].mimetype,
+      size: result.bytes,
+      url: result.secure_url
+    }));
+  } else {
+    // Development disk storage: build /uploads/ relative URL
+    images = uploadedFiles.map((f) => ({
+      fileName: f.filename,
+      originalName: f.originalname,
+      mimeType: f.mimetype,
+      size: f.size,
+      url: `/uploads/${f.filename}`
+    }));
+  }
 
   const ticketData = {
     ...req.body,

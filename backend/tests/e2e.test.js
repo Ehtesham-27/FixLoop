@@ -10,6 +10,7 @@ import { Ticket } from '../src/models/Ticket.js';
 import { Category } from '../src/models/Category.js';
 import { AuditLog } from '../src/models/AuditLog.js';
 import { ROLES } from '../src/constants/roles.js';
+import { cloudinaryConfigured } from '../src/config/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -180,9 +181,13 @@ async function runE2ETests() {
     assert(ticketCode?.startsWith('FL-'), `Human-readable ticket code generated: ${ticketCode}`);
 
     if (data.data?.ticket?.images?.[0]?.fileName) {
-      createdFilesToClean.push(
-        path.resolve(__dirname, '../uploads', data.data.ticket.images[0].fileName)
-      );
+      if (!cloudinaryConfigured) {
+        // In disk-storage mode, track local file path for cleanup
+        createdFilesToClean.push(
+          path.resolve(__dirname, '../uploads', data.data.ticket.images[0].fileName)
+        );
+      }
+      // In Cloudinary mode, fileName is a public_id; no local file to clean up
     }
   }
 
