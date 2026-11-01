@@ -117,3 +117,4 @@ This guide details the procedure for deploying FixLoop to production using Mongo
 - [ ] **Ticket Submission:** Submit an issue with a photo attachment and verify thumbnail renders.
 - [ ] **Admin Triage:** Log in as Admin, assign a Technician, change priority to `HIGH`.
 - [ ] **Technician Resolution:** Log in as Technician, change status to `IN_PROGRESS`, resolve with notes.
+

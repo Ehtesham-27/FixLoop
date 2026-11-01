@@ -134,3 +134,4 @@ sequenceDiagram
 - Files exceeding 5MB are rejected with `400 Bad Request`.
 - Dangerous file extensions (`.sh`, `.exe`, `.bat`, `.js`) are rejected with `400 Bad Request`.
 - Uploaded files are served statically from `/uploads/:filename` with correct MIME headers.
+

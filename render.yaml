@@ -27,3 +27,4 @@ services:
         value: uploads
       - key: MAX_FILE_SIZE_MB
         value: 5
+

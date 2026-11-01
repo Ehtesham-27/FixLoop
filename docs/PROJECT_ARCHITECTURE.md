@@ -163,3 +163,4 @@ Full Stack 2/
         ├── services/         # Axios API clients
         └── types/            # TypeScript interfaces & types
 ```
+
