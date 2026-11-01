@@ -19,6 +19,7 @@
     "seed:backend:interactive": "npm run seed:interactive --prefix backend",
     "test:db": "npm run test:db --prefix backend",
     "test:auth": "npm run test:auth --prefix backend",
+    "test:tickets": "npm run test:tickets --prefix backend",
     "test": "npm test --prefix backend"
   },
   "keywords": [

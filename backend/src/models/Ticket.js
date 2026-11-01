@@ -43,20 +43,23 @@ const ticketSchema = new mongoose.Schema(
     },
     building: {
       type: String,
-      required: [true, 'Building name is required'],
       trim: true,
-      maxlength: [100, 'Building name cannot exceed 100 characters']
+      maxlength: [100, 'Building name cannot exceed 100 characters'],
+      default: ''
     },
     room: {
       type: String,
-      required: [true, 'Room or specific location is required'],
       trim: true,
-      maxlength: [100, 'Room location cannot exceed 100 characters']
+      maxlength: [100, 'Room location cannot exceed 100 characters'],
+      default: ''
     },
     location: {
       type: String,
       trim: true,
-      maxlength: [150, 'Location cannot exceed 150 characters']
+      maxlength: [150, 'Location cannot exceed 150 characters'],
+      default: function () {
+        return this.building && this.room ? `${this.building} - ${this.room}` : '';
+      }
     },
     priority: {
       type: String,
@@ -107,15 +110,31 @@ const ticketSchema = new mongoose.Schema(
   }
 );
 
-// Automatic location sync before save if building & room are provided
-ticketSchema.pre('save', function (next) {
+// Automatic building, room, and location synchronization before validation
+ticketSchema.pre('validate', function (next) {
   if (!this.location && this.building && this.room) {
     this.location = `${this.building} - ${this.room}`;
+  } else if (this.location && (!this.building || !this.room)) {
+    if (this.location.includes('-')) {
+      const parts = this.location.split('-');
+      if (!this.building) this.building = parts[0].trim();
+      if (!this.room) this.room = parts.slice(1).join('-').trim();
+    } else {
+      if (!this.building) this.building = this.location;
+      if (!this.room) this.room = 'General';
+    }
   }
+
+  // Generate human-friendly ticketCode if absent
+  if (!this.ticketCode) {
+    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+    this.ticketCode = `FL-${randomSuffix}`;
+  }
+
   next();
 });
 
-// Compound indexes specified in Section 6 of FixLoop_DATABASE.md
+// Compound indexes
 ticketSchema.index({ reportedBy: 1, createdAt: -1 });
 ticketSchema.index({ assignedTo: 1, status: 1, createdAt: -1 });
 ticketSchema.index({ status: 1, priority: 1, createdAt: -1 });

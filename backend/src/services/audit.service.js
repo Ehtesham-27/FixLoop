@@ -1,25 +1,30 @@
 import { AuditLog } from '../models/AuditLog.js';
 
 /**
- * Audit Service Scaffold
- * 
- * Records system transitions and ownership changes for audit trail.
+ * Audit Service
+ * Records system transitions and actions for an immutable audit trail.
  */
 export const auditService = {
-  async logAction({ ticketId, actorId, action, oldValue = null, newValue = null }) {
-    // Scaffold implementation for recording audit entries
+  /**
+   * Appends an audit entry.
+   */
+  async logAction({ ticketId, actorId, action, oldValue = null, newValue = null, note = '' }) {
     return AuditLog.create({
       ticketId,
       actorId,
       action,
       oldValue,
-      newValue
+      newValue,
+      note
     });
   },
 
+  /**
+   * Retrieves chronological audit history for a given ticket.
+   */
   async getTicketActivity(ticketId) {
-    // TODO [Phase 6]: Fetch and format chronological audit log for a ticket
-    return AuditLog.find({ ticketId }).sort({ createdAt: -1 }).populate('actorId', 'name role');
+    return AuditLog.find({ ticketId })
+      .sort({ createdAt: -1 })
+      .populate('actorId', 'name email role');
   }
 };
-
