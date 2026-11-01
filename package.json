@@ -14,7 +14,10 @@
     "build:frontend": "npm run build --prefix frontend",
     "typecheck:frontend": "npm run typecheck --prefix frontend",
     "lint:frontend": "npm run lint --prefix frontend",
-    "check:backend": "npm run check --prefix backend"
+    "check:backend": "npm run check --prefix backend",
+    "seed:backend": "npm run seed --prefix backend",
+    "seed:backend:interactive": "npm run seed:interactive --prefix backend",
+    "test:db": "npm run test:db --prefix backend"
   },
   "keywords": [
     "campus-maintenance",
@@ -25,4 +28,3 @@
   "author": "",
   "license": "ISC"
 }
-

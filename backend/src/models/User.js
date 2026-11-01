@@ -49,6 +49,8 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Note: unique index on email is created automatically via { unique: true } on the field definition.
+
 // Method to verify password
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.passwordHash);

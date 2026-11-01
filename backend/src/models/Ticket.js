@@ -2,13 +2,14 @@ import mongoose from 'mongoose';
 import { PRIORITIES, PRIORITY_LIST } from '../constants/priorities.js';
 import { TICKET_STATUS, TICKET_STATUS_LIST } from '../constants/ticket-status.js';
 
-const imageSchema = new mongoose.Schema(
+const attachmentSchema = new mongoose.Schema(
   {
-    filename: { type: String, required: true },
+    fileName: { type: String, required: true },
     originalName: { type: String, required: true },
     mimeType: { type: String, required: true },
     size: { type: Number, required: true },
-    url: { type: String, required: true }
+    url: { type: String, required: true },
+    uploadedAt: { type: Date, default: Date.now }
   },
   { _id: false }
 );
@@ -32,12 +33,13 @@ const ticketSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Ticket description is required'],
       trim: true,
+      minlength: [10, 'Description must be at least 10 characters long'],
       maxlength: [2000, 'Description cannot exceed 2000 characters']
     },
     category: {
-      type: String,
-      required: [true, 'Category is required'],
-      trim: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      required: [true, 'Category reference is required']
     },
     building: {
       type: String,
@@ -50,6 +52,11 @@ const ticketSchema = new mongoose.Schema(
       required: [true, 'Room or specific location is required'],
       trim: true,
       maxlength: [100, 'Room location cannot exceed 100 characters']
+    },
+    location: {
+      type: String,
+      trim: true,
+      maxlength: [150, 'Location cannot exceed 150 characters']
     },
     priority: {
       type: String,
@@ -71,23 +78,28 @@ const ticketSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Reporter reference is required'],
-      index: true
+      alias: 'reporter'
     },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      default: null,
-      index: true
+      default: null
     },
     images: {
-      type: [imageSchema],
-      default: []
+      type: [attachmentSchema],
+      default: [],
+      alias: 'attachments'
     },
     resolutionNote: {
       type: String,
       trim: true,
       maxlength: [2000, 'Resolution note cannot exceed 2000 characters'],
-      default: ''
+      default: '',
+      alias: 'resolutionNotes'
+    },
+    resolvedAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -95,9 +107,18 @@ const ticketSchema = new mongoose.Schema(
   }
 );
 
-// Helpful indexes for queries
-ticketSchema.index({ status: 1, priority: 1 });
-ticketSchema.index({ createdAt: -1 });
+// Automatic location sync before save if building & room are provided
+ticketSchema.pre('save', function (next) {
+  if (!this.location && this.building && this.room) {
+    this.location = `${this.building} - ${this.room}`;
+  }
+  next();
+});
+
+// Compound indexes specified in Section 6 of FixLoop_DATABASE.md
+ticketSchema.index({ reportedBy: 1, createdAt: -1 });
+ticketSchema.index({ assignedTo: 1, status: 1, createdAt: -1 });
+ticketSchema.index({ status: 1, priority: 1, createdAt: -1 });
+ticketSchema.index({ category: 1, createdAt: -1 });
 
 export const Ticket = mongoose.model('Ticket', ticketSchema);
-

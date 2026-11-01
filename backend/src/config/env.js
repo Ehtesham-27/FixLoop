@@ -18,7 +18,16 @@ const envSchema = {
   ACCESS_TOKEN_TTL: process.env.ACCESS_TOKEN_TTL || '15m',
   REFRESH_TOKEN_TTL: process.env.REFRESH_TOKEN_TTL || '7d',
   UPLOAD_DIR: process.env.UPLOAD_DIR || 'uploads',
-  MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '5', 10)
+  MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '5', 10),
+
+  // Optional seed variables for first-time account initialization
+  INITIAL_ADMIN_NAME: process.env.INITIAL_ADMIN_NAME || '',
+  INITIAL_ADMIN_EMAIL: process.env.INITIAL_ADMIN_EMAIL ? process.env.INITIAL_ADMIN_EMAIL.trim().toLowerCase() : '',
+  INITIAL_ADMIN_PASSWORD: process.env.INITIAL_ADMIN_PASSWORD || '',
+
+  INITIAL_TECH_NAME: process.env.INITIAL_TECH_NAME || '',
+  INITIAL_TECH_EMAIL: process.env.INITIAL_TECH_EMAIL ? process.env.INITIAL_TECH_EMAIL.trim().toLowerCase() : '',
+  INITIAL_TECH_PASSWORD: process.env.INITIAL_TECH_PASSWORD || ''
 };
 
 export function validateEnv() {
@@ -40,4 +49,3 @@ export function validateEnv() {
 }
 
 export const env = envSchema;
-

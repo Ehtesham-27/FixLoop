@@ -156,6 +156,30 @@ npm install --prefix backend
 npm install --prefix frontend
 ```
 
+### 4. Database Setup & Seeding
+
+FixLoop connects to MongoDB using the `MONGODB_URI` environment variable.
+
+1. **Start MongoDB:**
+   - **Local MongoDB Community Server:** Ensure MongoDB service is running on `mongodb://127.0.0.1:27017/fixloop`.
+   - **MongoDB Atlas:** Obtain your cluster connection string and paste it into `backend/.env` under `MONGODB_URI`.
+
+2. **Verify Database Models & Validation:**
+   ```bash
+   npm run test:db
+   ```
+
+3. **Seed Maintenance Categories & Initial Accounts:**
+   - **Standard Seeding:** Seeds all 8 campus categories and any configured initial admin/technician accounts from `.env`:
+     ```bash
+     npm run seed:backend
+     ```
+   - **Interactive Seeding:** Prompts for administrator and technician credentials securely in the terminal (passwords are automatically hashed with bcrypt):
+     ```bash
+     npm run seed:backend:interactive
+     ```
+   *(Note: The seeder is idempotent. Re-running it will never create duplicate categories or overwrite existing account credentials).*
+
 ---
 
 ## 7. How to Run Frontend and Backend
@@ -188,18 +212,28 @@ npm run build --prefix frontend
 
 ## 8. API Health Check
 
-Verify that the backend is running and healthy:
+Verify that the backend is running and view database connectivity status:
 ```bash
 curl http://localhost:5000/api/health
 ```
-Response:
+Response when connected to MongoDB:
 ```json
 {
   "status": "ok",
   "service": "FixLoop API",
-  "uptime": 2.14,
-  "timestamp": "2026-11-01T13:50:00.000Z",
+  "uptime": 12.34,
+  "timestamp": "2026-11-01T14:15:00.000Z",
   "database": "connected"
+}
+```
+Response when database is offline/unreachable:
+```json
+{
+  "status": "degraded",
+  "service": "FixLoop API",
+  "uptime": 12.34,
+  "timestamp": "2026-11-01T14:15:00.000Z",
+  "database": "disconnected"
 }
 ```
 

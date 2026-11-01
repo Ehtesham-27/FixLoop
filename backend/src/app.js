@@ -56,12 +56,13 @@ app.use('/uploads', express.static(path.resolve(__dirname, '../', env.UPLOAD_DIR
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
+  const dbConnected = isDbConnected();
+  res.status(dbConnected ? 200 : 503).json({
+    status: dbConnected ? 'ok' : 'degraded',
     service: 'FixLoop API',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    database: isDbConnected() ? 'connected' : 'disconnected'
+    database: dbConnected ? 'connected' : 'disconnected'
   });
 });
 
