@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ticketService } from '../../services/ticket.service';
 import { adminService } from '../../services/admin.service';
 import { categoryService } from '../../services/category.service';
@@ -14,15 +15,18 @@ import {
   AlertCircle,
   Wrench,
   SlidersHorizontal,
-  X
+  X,
+  Clock
 } from 'lucide-react';
 
 export const AdminTicketsPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 10, pages: 1 });
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [slaStatusFilter, setSlaStatusFilter] = useState<string>(searchParams.get('slaStatus') || 'ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -72,6 +76,7 @@ export const AdminTicketsPage: React.FC = () => {
         status: statusFilter,
         priority: priorityFilter,
         category: categoryFilter,
+        slaStatus: slaStatusFilter,
         search: debouncedSearch
       });
 
@@ -84,7 +89,7 @@ export const AdminTicketsPage: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [currentPage, statusFilter, priorityFilter, categoryFilter, debouncedSearch]);
+  }, [currentPage, statusFilter, priorityFilter, categoryFilter, slaStatusFilter, debouncedSearch]);
 
   useEffect(() => {
     loadTickets();
@@ -150,7 +155,7 @@ export const AdminTicketsPage: React.FC = () => {
 
       {/* Filters and Search Bar */}
       <div className="bg-white border border-slate-200/80 rounded-xl p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search box */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -198,6 +203,26 @@ export const AdminTicketsPage: React.FC = () => {
               <option value="MEDIUM">Medium</option>
               <option value="HIGH">High</option>
               <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+
+          {/* SLA Status filter */}
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <select
+              value={slaStatusFilter}
+              onChange={(e) => {
+                setSlaStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-900 font-medium"
+            >
+              <option value="ALL">All SLA Statuses</option>
+              <option value="ON_TRACK">On Track</option>
+              <option value="AT_RISK">At Risk (≤20% left)</option>
+              <option value="OVERDUE">Overdue (Breached)</option>
+              <option value="RESOLVED_ON_TIME">Resolved On Time</option>
+              <option value="RESOLVED_LATE">Resolved Late</option>
             </select>
           </div>
 

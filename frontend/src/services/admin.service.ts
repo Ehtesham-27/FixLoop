@@ -1,9 +1,14 @@
 import api from './api';
-import { AdminOverview, ApiResponse, Pagination, User } from '../types';
+import { AdminOverview, ApiResponse, Pagination, SlaOverview, User } from '../types';
 
 export const adminService = {
   async getOverview() {
     const res = await api.get<ApiResponse<AdminOverview>>('/admin/overview');
+    return res.data.data;
+  },
+
+  async getSlaOverview() {
+    const res = await api.get<ApiResponse<SlaOverview>>('/admin/sla-overview');
     return res.data.data;
   },
 

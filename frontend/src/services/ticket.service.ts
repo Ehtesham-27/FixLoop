@@ -8,6 +8,7 @@ export interface TicketFilters {
   priority?: string;
   category?: string;
   search?: string;
+  slaStatus?: string;
 }
 
 export const ticketService = {
@@ -18,6 +19,7 @@ export const ticketService = {
     if (filters.status && filters.status !== 'ALL') params.append('status', filters.status);
     if (filters.priority && filters.priority !== 'ALL') params.append('priority', filters.priority);
     if (filters.category && filters.category !== 'ALL') params.append('category', filters.category);
+    if (filters.slaStatus && filters.slaStatus !== 'ALL') params.append('slaStatus', filters.slaStatus);
 
     const res = await api.get<ApiResponse<{ tickets: Ticket[]; pagination: Pagination }>>(
       `/tickets/my?${params.toString()}`
@@ -31,6 +33,7 @@ export const ticketService = {
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.status && filters.status !== 'ALL') params.append('status', filters.status);
     if (filters.priority && filters.priority !== 'ALL') params.append('priority', filters.priority);
+    if (filters.slaStatus && filters.slaStatus !== 'ALL') params.append('slaStatus', filters.slaStatus);
 
     const res = await api.get<ApiResponse<{ tickets: Ticket[]; pagination: Pagination }>>(
       `/tickets/assigned?${params.toString()}`
@@ -46,6 +49,7 @@ export const ticketService = {
     if (filters.priority && filters.priority !== 'ALL') params.append('priority', filters.priority);
     if (filters.category && filters.category !== 'ALL') params.append('category', filters.category);
     if (filters.search) params.append('search', filters.search);
+    if (filters.slaStatus && filters.slaStatus !== 'ALL') params.append('slaStatus', filters.slaStatus);
 
     const res = await api.get<ApiResponse<{ tickets: Ticket[]; pagination: Pagination }>>(
       `/tickets?${params.toString()}`

@@ -56,6 +56,15 @@ export const getAdminOverview = asyncHandler(async (req, res) => {
   });
 });
 
+export const getAdminSlaOverview = asyncHandler(async (req, res) => {
+  const slaOverview = await ticketService.getAdminSlaOverview();
+
+  res.status(200).json({
+    success: true,
+    data: slaOverview
+  });
+});
+
 /**
  * Create a new technician account.
  * Accessible strictly to authenticated ADMIN accounts.

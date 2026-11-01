@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminService } from '../../services/admin.service';
 import { ticketService } from '../../services/ticket.service';
-import { AdminOverview, Ticket } from '../../types';
+import { AdminOverview, SlaOverview, Ticket } from '../../types';
 import { TicketCard } from '../../components/tickets/TicketCard';
 import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 import {
@@ -14,11 +14,13 @@ import {
   CheckCircle2,
   Users,
   Wrench,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [slaOverview, setSlaOverview] = useState<SlaOverview | null>(null);
   const [openTickets, setOpenTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,12 +32,14 @@ export const AdminDashboardPage: React.FC = () => {
     setError('');
 
     try {
-      const [overviewData, ticketsRes] = await Promise.all([
+      const [overviewData, slaData, ticketsRes] = await Promise.all([
         adminService.getOverview(),
+        adminService.getSlaOverview(),
         ticketService.getAllTickets({ status: 'OPEN', limit: 6 })
       ]);
 
       if (overviewData) setOverview(overviewData);
+      if (slaData) setSlaOverview(slaData);
       if (ticketsRes.tickets) setOpenTickets(ticketsRes.tickets);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
@@ -56,7 +60,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Maintenance Administration</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Monitor campus issues, assign technician staff, and ensure timely resolution.
+            Monitor campus issues, track SLA compliance, assign technicians, and ensure timely resolution.
           </p>
         </div>
         <button
@@ -84,6 +88,86 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       ) : (
         <>
+          {/* SLA Performance Overview Cards */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  SLA & Resolution Tracking
+                </h2>
+                <p className="text-[11px] text-slate-400">
+                  Target windows: Critical 2h, High 8h, Medium 24h, Low 72h
+                </p>
+              </div>
+              <Link
+                to="/admin/tickets?slaStatus=OVERDUE"
+                className="text-xs font-semibold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1"
+              >
+                <span>View Overdue ({slaOverview?.overdue ?? 0})</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Active</span>
+                  <ClipboardList className="h-4 w-4" />
+                </div>
+                <p className="text-2xl font-bold text-slate-900 mt-1">
+                  {slaOverview?.totalUnresolved ?? 0}
+                </p>
+                <span className="text-[11px] text-slate-400">Unresolved tickets</span>
+              </div>
+
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs">
+                <div className="flex items-center justify-between text-emerald-600">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">On Track</span>
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">
+                  {slaOverview?.onTrack ?? 0}
+                </p>
+                <span className="text-[11px] text-emerald-600">&gt;20% SLA remaining</span>
+              </div>
+
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs">
+                <div className="flex items-center justify-between text-amber-600">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">At Risk</span>
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+                <p className="text-2xl font-bold text-amber-600 mt-1">
+                  {slaOverview?.atRisk ?? 0}
+                </p>
+                <span className="text-[11px] text-amber-600">&le;20% SLA remaining</span>
+              </div>
+
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs">
+                <div className="flex items-center justify-between text-rose-600">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Overdue</span>
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <p className="text-2xl font-bold text-rose-600 mt-1">
+                  {slaOverview?.overdue ?? 0}
+                </p>
+                <span className="text-[11px] text-rose-600">Past target deadline</span>
+              </div>
+
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs col-span-2 sm:col-span-1">
+                <div className="flex items-center justify-between text-blue-600">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Compliance</span>
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <p className="text-2xl font-bold text-blue-600 mt-1">
+                  {slaOverview?.complianceRate ?? 100}%
+                </p>
+                <span className="text-[11px] text-slate-400">
+                  {slaOverview?.resolvedOnTime ?? 0} on time / {slaOverview?.resolvedLate ?? 0} late
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Key Metrics Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             <div className="bg-white border border-slate-200/80 rounded-xl p-4">

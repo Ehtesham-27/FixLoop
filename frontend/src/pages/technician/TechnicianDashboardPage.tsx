@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Play, MapPin, Clock, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Play, MapPin, ArrowRight } from 'lucide-react';
 import { ticketService } from '../../services/ticket.service';
 import { Ticket, TicketStatus } from '../../types';
 import { STATUS_COLORS, PRIORITY_COLORS } from '../../constants';
@@ -8,6 +8,8 @@ import { formatDate } from '../../utils';
 import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/feedback/Alert';
+import { SlaBadge } from '../../components/sla/SlaBadge';
+import { SlaCountdown } from '../../components/sla/SlaCountdown';
 
 export const TechnicianDashboardPage: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -98,6 +100,7 @@ export const TechnicianDashboardPage: React.FC = () => {
 
   const activeQueue = tickets.filter((t) => t.status !== 'RESOLVED');
   const resolvedQueue = tickets.filter((t) => t.status === 'RESOLVED');
+  const overdueCount = activeQueue.filter((t) => t.isOverdue).length;
 
   return (
     <div className="space-y-6">
@@ -106,7 +109,7 @@ export const TechnicianDashboardPage: React.FC = () => {
           Technician Work Queue
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Tasks assigned to you by administrators. Review details, begin repairs, and document resolution.
+          Tasks assigned to you by administrators. Review SLA deadlines, begin repairs, and document resolution.
         </p>
       </div>
 
@@ -114,22 +117,28 @@ export const TechnicianDashboardPage: React.FC = () => {
       {actionError && <Alert type="error" message={actionError} />}
 
       {/* Overview metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 sm:p-5 shadow-xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Total Assigned
           </span>
           <p className="text-2xl font-bold text-slate-900 mt-1">{tickets.length}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs">
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 sm:p-5 shadow-xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
-            Awaiting Action / In Progress
+            Active Tasks
           </span>
           <p className="text-2xl font-bold text-amber-600 mt-1">{activeQueue.length}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs">
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 sm:p-5 shadow-xs">
+          <span className="text-xs font-semibold uppercase tracking-wider text-rose-600">
+            Overdue (Breached)
+          </span>
+          <p className="text-2xl font-bold text-rose-600 mt-1">{overdueCount}</p>
+        </div>
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 sm:p-5 shadow-xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-            Completed / Resolved
+            Resolved
           </span>
           <p className="text-2xl font-bold text-emerald-600 mt-1">{resolvedQueue.length}</p>
         </div>
@@ -151,92 +160,106 @@ export const TechnicianDashboardPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {activeQueue.map((ticket) => (
-              <div
-                key={ticket._id}
-                className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs hover:border-slate-300 transition"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      {ticket.ticketCode && (
-                        <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                          {ticket.ticketCode}
+            {activeQueue.map((ticket) => {
+              const isOverdue = ticket.isOverdue;
+              return (
+                <div
+                  key={ticket._id}
+                  className={`bg-white border ${
+                    isOverdue ? 'border-rose-300 ring-1 ring-rose-100' : 'border-slate-200/80'
+                  } rounded-xl p-5 shadow-xs hover:border-slate-300 transition`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        {ticket.ticketCode && (
+                          <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                            {ticket.ticketCode}
+                          </span>
+                        )}
+                        {ticket.slaStatus && <SlaBadge status={ticket.slaStatus} />}
+                        <span
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+                            PRIORITY_COLORS[ticket.priority]
+                          }`}
+                        >
+                          {ticket.priority}
                         </span>
-                      )}
-                      <span
-                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
-                          PRIORITY_COLORS[ticket.priority]
-                        }`}
+                        <span
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+                            STATUS_COLORS[ticket.status]
+                          }`}
+                        >
+                          {ticket.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <Link
+                        to={`/tickets/${ticket._id}`}
+                        className="text-base font-bold text-slate-900 hover:text-blue-600 transition"
                       >
-                        {ticket.priority}
-                      </span>
-                      <span
-                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
-                          STATUS_COLORS[ticket.status]
-                        }`}
-                      >
-                        {ticket.status.replace('_', ' ')}
-                      </span>
+                        {ticket.title}
+                      </Link>
                     </div>
-                    <Link
-                      to={`/tickets/${ticket._id}`}
-                      className="text-base font-bold text-slate-900 hover:text-blue-600 transition"
-                    >
-                      {ticket.title}
-                    </Link>
+
+                    {/* Actions according to lifecycle */}
+                    <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 pt-2 sm:pt-0">
+                      {ticket.status === 'ASSIGNED' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleStartWork(ticket._id)}
+                          className="gap-1.5"
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                          <span>Start Work</span>
+                        </Button>
+                      )}
+
+                      {ticket.status === 'IN_PROGRESS' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleOpenResolveModal(ticket)}
+                          className="bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 gap-1.5"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Resolve Ticket</span>
+                        </Button>
+                      )}
+
+                      <Link
+                        to={`/tickets/${ticket._id}`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 px-2.5 py-1.5 border border-slate-300 rounded-md hover:bg-slate-50 transition"
+                      >
+                        <span>Details</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </div>
                   </div>
 
-                  {/* Actions according to lifecycle */}
-                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 pt-2 sm:pt-0">
-                    {ticket.status === 'ASSIGNED' && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleStartWork(ticket._id)}
-                        className="gap-1.5"
-                      >
-                        <Play className="h-3.5 w-3.5" />
-                        <span>Start Work</span>
-                      </Button>
-                    )}
+                  <p className="text-sm text-slate-600 mb-3">{ticket.description}</p>
 
-                    {ticket.status === 'IN_PROGRESS' && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleOpenResolveModal(ticket)}
-                        className="bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 gap-1.5"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Resolve Ticket</span>
-                      </Button>
-                    )}
-
-                    <Link
-                      to={`/tickets/${ticket._id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 px-2.5 py-1.5 border border-slate-300 rounded-md hover:bg-slate-50 transition"
-                    >
-                      <span>Details</span>
-                      <ArrowRight className="h-3 w-3" />
-                    </Link>
+                  <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100 gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{ticket.location || `${ticket.building || ''} - ${ticket.room || ''}`}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {ticket.dueAt && (
+                        <SlaCountdown
+                          dueAt={ticket.dueAt}
+                          status={ticket.status}
+                          resolvedAt={ticket.resolvedAt}
+                        />
+                      )}
+                      <div className="flex items-center gap-1 text-slate-400">
+                        <span>Reported: {formatDate(ticket.createdAt)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <p className="text-sm text-slate-600 mb-3">{ticket.description}</p>
-
-                <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100 gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    <span>{ticket.location || `${ticket.building || ''} - ${ticket.room || ''}`}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-slate-400" />
-                    <span>Reported: {formatDate(ticket.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
