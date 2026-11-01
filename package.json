@@ -20,7 +20,12 @@
     "test:db": "npm run test:db --prefix backend",
     "test:auth": "npm run test:auth --prefix backend",
     "test:tickets": "npm run test:tickets --prefix backend",
-    "test": "npm test --prefix backend"
+    "test:upload": "npm run test:upload --prefix backend",
+    "test:e2e": "npm run test:e2e --prefix backend",
+    "test": "npm test --prefix backend",
+    "typecheck": "npm run typecheck --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "build": "npm run build --prefix frontend"
   },
   "keywords": [
     "campus-maintenance",
