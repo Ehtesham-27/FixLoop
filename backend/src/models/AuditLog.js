@@ -6,7 +6,8 @@ export const AUDIT_ACTIONS = Object.freeze({
   STATUS_CHANGED: 'STATUS_CHANGED',
   PRIORITY_CHANGED: 'PRIORITY_CHANGED',
   RESOLUTION_ADDED: 'RESOLUTION_ADDED',
-  ATTACHMENT_ADDED: 'ATTACHMENT_ADDED'
+  ATTACHMENT_ADDED: 'ATTACHMENT_ADDED',
+  TECHNICIAN_CREATED: 'TECHNICIAN_CREATED'
 });
 
 export const AUDIT_ACTION_LIST = Object.values(AUDIT_ACTIONS);
@@ -16,7 +17,8 @@ const auditLogSchema = new mongoose.Schema(
     ticketId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Ticket',
-      required: [true, 'Ticket reference is required'],
+      required: false,
+      default: null,
       alias: 'ticket'
     },
     actorId: {

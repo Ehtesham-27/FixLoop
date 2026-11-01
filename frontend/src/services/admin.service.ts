@@ -23,6 +23,11 @@ export const adminService = {
   async getActiveTechnicians() {
     const data = await this.getUsers({ role: 'TECHNICIAN', limit: 100 });
     return data.users.filter((u) => u.isActive);
+  },
+
+  async createTechnician(payload: { name: string; email: string; password: string }) {
+    const res = await api.post<ApiResponse<{ user: User }>>('/admin/technicians', payload);
+    return res.data;
   }
 };
 

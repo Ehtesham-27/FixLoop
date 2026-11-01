@@ -8,7 +8,7 @@ export const auditService = {
   /**
    * Appends an audit entry.
    */
-  async logAction({ ticketId, actorId, action, oldValue = null, newValue = null, note = '' }) {
+  async logAction({ ticketId = null, actorId, action, oldValue = null, newValue = null, note = '' }) {
     return AuditLog.create({
       ticketId,
       actorId,
