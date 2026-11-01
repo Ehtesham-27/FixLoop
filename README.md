@@ -4,31 +4,43 @@ FixLoop is a production-ready, full-stack campus maintenance management platform
 
 ---
 
-## 1. Core Capabilities & Workflows
+## 1. Core Capabilities & Features
 
 - **Student Portal:**
   - Campus issue reporting with live category selection, building, and room specification.
   - Multi-image photo attachment support (JPEG, PNG, WebP up to 5MB) with client-side preview and remove actions.
-  - My Tickets dashboard with real-time status pills, priority indicators, and pagination.
-  - Detailed ticket view with complete activity timeline, technician resolution notes, and photo galleries.
+  - My Tickets dashboard with real-time status pills, priority indicators, SLA badges, and pagination.
+  - Detailed ticket view with complete activity timeline, technician resolution notes, photo galleries, and SLA status.
+
 - **Technician Portal:**
   - Dedicated assigned work queue (`GET /api/tickets/assigned`).
+  - Real-time SLA deadline tracking and overdue warning indicators.
   - Strict state-machine progression: `ASSIGNED` → `IN_PROGRESS` → `RESOLVED`.
   - Mandatory resolution note entry (>= 5 characters) with automatic timestamping upon issue closure.
+
 - **Administrator Portal:**
   - Real-time campus maintenance metrics (Total, Open, Assigned, In Progress, Resolved, Critical).
+  - SLA Overview metrics dashboard (Total Unresolved, On Track, At Risk, Overdue, Resolved On Time, Resolved Late, Compliance Rate %).
   - Triage queue for unassigned issues (`OPEN` status).
-  - Complete campus ticket directory with filtering by status, priority, category, and text search.
+  - Complete campus ticket directory with multi-criteria filtering by status, priority, category, SLA status, and keyword search.
   - Active technician assignment and reassignment modals.
-  - Ticket priority escalation (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+  - Secure technician account provisioning with temporary passwords and audit logging.
+  - Ticket priority escalation (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) with automatic SLA recalculation.
   - Campus user directory with role badges and account statuses.
-- **Security & Reliability:**
+
+- **SLA & Overdue Engine:**
+  - Centralized SLA target hours: Critical (2h), High (8h), Medium (24h), Low (72h).
+  - Deterministic SLA statuses: `ON_TRACK`, `AT_RISK` (<= 20% window remaining), `OVERDUE`, `RESOLVED_ON_TIME`, and `RESOLVED_LATE`.
+  - Compound MongoDB index on `{ dueAt: 1, status: 1 }` for high-performance overdue filtering.
+  - Idempotent legacy migration utility that backfills SLA targets on existing tickets at server startup without altering `createdAt`.
+
+- **Security & Storage:**
   - Bcrypt password hashing (work factor 12).
-  - Short-lived JWT access tokens (15m) paired with rotating `HttpOnly`, `SameSite=Strict` refresh cookies (7d).
+  - Short-lived JWT access tokens (15m) paired with rotating `HttpOnly`, `SameSite=Strict/None` refresh cookies (7d).
   - Automatic refresh token reuse detection and instant session revocation.
-  - Complete immutable audit logging (`AuditLog` collection) for every status transition and priority update.
-  - Anti-IDOR server-side ownership enforcement and NoSQL injection mitigation.
-  - Multi-layer file upload validation (MIME, extension, 5MB limit, randomized safe filenames).
+  - Complete immutable audit logging (`AuditLog` collection) for all status transitions and priority updates.
+  - Dual-mode image storage: Cloudinary CDN in production with local disk storage in development.
+  - Anti-IDOR server-side ownership enforcement, NoSQL injection mitigation, and Zod input validation.
 
 ---
 
@@ -43,31 +55,71 @@ FixLoop is a production-ready, full-stack campus maintenance management platform
 - **Icons:** Lucide React
 
 ### Backend
-- **Runtime:** Node.js (v20+ LTS)
+- **Runtime:** Node.js (v22 LTS)
 - **Framework:** Express.js (ES Modules)
 - **Database & ODM:** MongoDB Atlas via Mongoose 8
 - **Validation:** Zod schemas for request body, query, and params
-- **Security:** Helmet (CORP cross-origin), bcryptjs, jsonwebtoken, express-rate-limit, cors, cookie-parser
-- **File Upload:** Multer local disk storage with cryptographic hex naming
+- **Security:** Helmet, bcryptjs, jsonwebtoken, express-rate-limit, cors, cookie-parser
+- **File Upload:** Multer with Cloudinary CDN storage (production) / disk storage (development)
 
 ---
 
-## 3. Project Architecture & State Machine
+## 3. Project Structure
 
 ```
-   Student Reports Issue (OPEN)
-             │
-             ▼
-   Admin Assigns Technician ────────► Status: ASSIGNED
-             │
-             ▼
-   Assigned Tech Clicks "Start Work" ─► Status: IN_PROGRESS
-             │
-             ▼
-   Assigned Tech Resolves with Note ──► Status: RESOLVED (resolvedAt recorded)
+FixLoop/
+├── .github/                      # CI/CD workflows
+├── backend/                      # Express.js REST API
+│   ├── src/
+│   │   ├── config/               # Environment, database, & Cloudinary config
+│   │   ├── constants/            # Roles, priorities, ticket status, & SLA constants
+│   │   ├── controllers/          # Request handlers (auth, ticket, admin, user)
+│   │   ├── middleware/           # Auth, RBAC, error handling, validation, upload
+│   │   ├── models/               # Mongoose schemas (User, Ticket, Category, AuditLog)
+│   │   ├── routes/               # Express route definitions
+│   │   ├── scripts/              # Database seeder scripts
+│   │   ├── services/             # Core business logic (auth, ticket, SLA, audit)
+│   │   ├── utils/                # Token utilities, error classes, SLA backfill
+│   │   ├── validators/           # Zod request validators
+│   │   ├── app.js                # Express app setup & middleware pipeline
+│   │   └── server.js             # Server startup & graceful shutdown
+│   ├── tests/                    # Integration & unit test suites (8 suites)
+│   ├── uploads/                  # Local uploads storage directory (.gitkeep)
+│   ├── package.json              # Backend dependencies & test scripts
+│   └── .env.example              # Backend environment template
+├── frontend/                     # React 18 + TypeScript + Vite SPA
+│   ├── src/
+│   │   ├── components/           # UI components (common, feedback, layout, sla, tickets)
+│   │   ├── constants/            # Frontend theme tokens, status colors, SLA constants
+│   │   ├── context/              # React AuthContext & session management
+│   │   ├── hooks/                # Custom hooks (useAuth)
+│   │   ├── layouts/              # AppLayout (nav/sidebar) & AuthLayout
+│   │   ├── pages/                # Route pages (auth, student, technician, admin, errors)
+│   │   ├── routes/               # AppRoutes & ProtectedRoute role guards
+│   │   ├── services/             # Axios API service clients
+│   │   ├── styles/               # Tailwind CSS entrypoint
+│   │   ├── types/                # TypeScript interfaces & domain types
+│   │   ├── utils/                # Formatting & string helper utilities
+│   │   ├── App.tsx               # Root component
+│   │   └── main.tsx              # Application entrypoint
+│   ├── package.json              # Frontend dependencies
+│   ├── vercel.json               # Vercel SPA routing & backend API proxy rewrite
+│   ├── vite.config.ts            # Vite build configuration
+│   └── .env.example              # Frontend environment template
+├── docs/                         # Engineering specifications & architectural documentation
+│   ├── API.md                    # REST API contract & endpoints
+│   ├── DATABASE.md               # MongoDB schema & indexing design
+│   ├── DEPLOYMENT.md             # Render & Vercel deployment guide
+│   ├── PROJECT_ARCHITECTURE.md   # Architectural design & data flows
+│   ├── REQUIREMENTS.md           # Product requirements specification
+│   ├── SECURITY.md               # Security model & defense-in-depth
+│   ├── TESTING.md                # Testing strategy & suite breakdown
+│   └── UI-UX.md                  # Design system & wireframe specifications
+├── render.yaml                   # Render Infrastructure-as-Code blueprint
+├── package.json                  # Monorepo root workspaces & orchestrator scripts
+├── LICENSE                       # Project license (ISC)
+└── README.md                     # Main project documentation
 ```
-
-For in-depth architectural specifications, see [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md).
 
 ---
 
@@ -81,7 +133,7 @@ Comprehensive engineering documents are located in the [`docs/`](docs/) director
 - [`docs/DATABASE.md`](docs/DATABASE.md) — Mongoose schemas, compound indexes, relations, and idempotent seeder guide.
 - [`docs/SECURITY.md`](docs/SECURITY.md) — Defense-in-depth architecture, JWT rotation, IDOR defense, and sanitization.
 - [`docs/UI-UX.md`](docs/UI-UX.md) — Design system, color tokens, responsive breakpoints, and screen inventory.
-- [`docs/TESTING.md`](docs/TESTING.md) — Automated testing strategy, test suite breakdown (160 assertions), and E2E flow.
+- [`docs/TESTING.md`](docs/TESTING.md) — Automated testing strategy, test suite breakdown, and E2E flow.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Production deployment guide for MongoDB Atlas, Render (backend), and Vercel (frontend).
 
 ---
@@ -89,28 +141,30 @@ Comprehensive engineering documents are located in the [`docs/`](docs/) director
 ## 5. Quickstart & Local Setup
 
 ### Prerequisites
-- Node.js v20+ LTS
+- Node.js v22+ LTS
 - npm v10+
 - MongoDB Community Server running locally OR a MongoDB Atlas cluster URI
+- (Optional) Free Cloudinary account for photo uploads
 
 ### 1. Installation
 Clone the repository and install dependencies:
 ```bash
-git clone <repository-url>
-cd "Full Stack 2"
+git clone https://github.com/Ehtesham-27/FixLoop.git
+cd FixLoop
 
-# Install monorepo dependencies
+# Install all monorepo dependencies
 npm install --prefix backend
 npm install --prefix frontend
 ```
 
 ### 2. Environment Configuration
+
 **Backend:**
 Copy `backend/.env.example` to `backend/.env` and supply your database connection and secrets:
 ```dotenv
 NODE_ENV=development
 PORT=5001
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/fixloop?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/fixloop?retryWrites=true&w=majority
 CLIENT_ORIGIN=http://localhost:5173
 JWT_ACCESS_SECRET=your_super_secret_access_key_min_32_chars
 JWT_REFRESH_SECRET=your_super_secret_refresh_key_min_32_chars
@@ -118,6 +172,11 @@ ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 UPLOAD_DIR=uploads
 MAX_FILE_SIZE_MB=5
+
+# Cloudinary (optional in dev, required in production)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 **Frontend:**
@@ -135,57 +194,110 @@ npm run seed:backend
 ### 4. Running Development Servers
 Start both servers simultaneously in separate terminals:
 ```bash
-# Terminal 1: Backend API (runs on http://localhost:5001)
+# Terminal 1: Backend API (http://localhost:5001)
 npm run dev:backend
 
-# Terminal 2: Frontend Client (runs on http://localhost:5173)
+# Terminal 2: Frontend Client (http://localhost:5173)
 npm run dev:frontend
 ```
 
 ---
 
-## 6. Automated Testing & Verification
+## 6. Demo Accounts & Evaluation Credentials
 
-FixLoop includes 5 automated backend integration suites (running against live MongoDB) and full frontend quality checks:
+For evaluators, instructors, and demonstration purposes, the following pre-configured test accounts are available to evaluate the role-based workflows:
+
+| Role | Email | Password | Primary Capabilities to Test |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin@campus.edu` | `AdminPassword123!` | Global dashboard, ticket triage, technician assignment, priority updates, SLA overview, technician account provisioning |
+| **Technician** | `tech@campus.edu` | `TechPassword123!` | Assigned work queue, SLA countdowns, starting work (`IN_PROGRESS`), resolving tickets with notes |
+| **Student** | `student@campus.edu` | `StudentPassword123!` | Reporting issues with photo attachments, viewing "My Tickets", tracking status & SLA activity timeline |
+
+### Role-Specific Demonstration Guides
+
+#### 1. Administrator Account
+- **Login:** `admin@campus.edu` / `AdminPassword123!`
+- **Role:** `ADMIN`
+- **What to Evaluate:**
+  - **Campus Dashboard:** Real-time metrics breakdown across ticket states and priorities.
+  - **SLA Overview:** Real-time compliance rate calculation (On Track, At Risk, Overdue, Resolved On Time vs Late).
+  - **Technician Assignment:** Review open tickets and assign technicians via modal dialogs.
+  - **Priority Management:** Escalate ticket priority (`LOW` → `CRITICAL`), triggering automatic SLA recalculation and audit logging.
+  - **User & Technician Provisioning:** Manage campus accounts and provision new technician staff with secure temporary credentials.
+
+#### 2. Technician Account
+- **Login:** `tech@campus.edu` / `TechPassword123!`
+- **Role:** `TECHNICIAN`
+- **What to Evaluate:**
+  - **Work Queue:** Filter and view tasks strictly assigned to this technician.
+  - **SLA Deadlines:** Live countdown timers and overdue badges based on issue priority.
+  - **State Machine Progression:** Transition tickets from `ASSIGNED` → `IN_PROGRESS`.
+  - **Resolution Documentation:** Mark issues as `RESOLVED` with mandatory resolution details (minimum 5 characters).
+
+#### 3. Student / Reporter Account
+- **Login:** `student@campus.edu` / `StudentPassword123!`
+- **Role:** `STUDENT`
+- **What to Evaluate:**
+  - **Issue Reporting:** Create new maintenance tickets specifying category, campus building, room, and photo attachments.
+  - **My Tickets Dashboard:** Track real-time progress, status chips, and priority levels for reported issues.
+  - **Activity Timeline:** Inspect detailed immutable audit logs and technician resolution notes.
+
+> [!WARNING]
+> **Evaluation Security Notice:**  
+> These credentials are provided strictly for demonstration and academic evaluation. Never reuse these credentials in a live public production deployment. In production, change all initial account passwords immediately and restrict administrative access to authorized campus personnel.
+
+---
+
+## 7. Automated Testing & Verification
+
+FixLoop includes 8 automated backend test suites (281 assertions executing against live MongoDB) and full frontend quality checks:
 
 ```bash
-# Run all automated backend tests (160 assertions)
+# Run all automated backend tests (281 assertions)
 npm test
 
 # Run individual test suites
-npm run test:db        # Database schemas, compound indexes, & connection
-npm run test:auth      # Student registration, login, JWT rotation, & RBAC
-npm run test:tickets   # Ticket workflow, state machine, ownership, & audit
-npm run test:upload    # Multer photo upload, size & MIME type validation
-npm run test:e2e       # Full 12-step multi-role end-to-end scenario
+npm run test:db          # Database schemas, compound indexes, & connection
+npm run test:auth        # Student registration, login, JWT rotation, & RBAC
+npm run test:tickets     # Ticket workflow, state machine, ownership, & audit
+npm run test:upload      # Multer photo upload, size & MIME type validation
+npm run test:e2e         # Full multi-role end-to-end scenario
+npm run test:cloudinary  # Cloudinary buffer upload & CSRF origin verification
+npm run test:admin-tech  # Admin technician account provisioning & RBAC
+npm run test:sla         # SLA calculation rules, overdue lifecycle, & deadlines
 
-# Run frontend checks
-npm run typecheck      # TypeScript static type check (tsc --noEmit)
-npm run lint           # ESLint code quality check
-npm run build          # Production Vite bundle build
+# Run frontend quality gates
+npm run typecheck        # TypeScript static type check (tsc --noEmit)
+npm run lint             # ESLint code quality check
+npm run build            # Production Vite bundle build
 ```
 
 ---
 
-## 7. User Roles Matrix
+## 8. Deployment Overview
 
-| Feature / Action | Student | Technician | Administrator |
-|---|:---:|:---:|:---:|
-| Register account | Self-registration | Admin created | Admin / Seeded |
-| Report issue with photos | Yes | No | Yes |
-| View own reported tickets | Yes | No | Yes |
-| View assigned tickets | No | Yes (assigned only) | Yes (all) |
-| View global campus queue | No | No | Yes |
-| Assign / Reassign staff | No | No | Yes |
-| Change ticket priority | No | No | Yes |
-| Start work (`IN_PROGRESS`) | No | Yes (if assigned) | Yes |
-| Resolve ticket with notes | No | Yes (if assigned) | Yes |
-| View user directory | No | No | Yes |
-| View campus analytics | No | No | Yes |
+FixLoop is designed for a ₹0/month production deployment:
+
+- **Frontend (Vercel):**
+  - Hosted on Vercel with SPA rewrite rules in `frontend/vercel.json`.
+  - Production URL: `https://fix-loop-livid.vercel.app`
+  - Rewrites `/api/:path*` requests directly to the Render backend to prevent cross-origin cookie issues.
+
+- **Backend (Render):**
+  - Hosted as a Node.js web service on Render Free Tier (`render.yaml`).
+  - Production URL: `https://fixloop.onrender.com`
+  - Automated health check at `/api/health`.
+
+- **Database (MongoDB Atlas):**
+  - M0 Free Cluster in AWS region.
+  - Automated compound indexes and TLS encrypted connection string.
+
+- **Media Storage (Cloudinary):**
+  - Free Tier Cloudinary image storage with automatic CDN distribution and unique file IDs.
 
 ---
 
-## 8. License
+## 9. License
 
 Developed for the Campus Maintenance and Issue Management System project.  
 License: ISC
