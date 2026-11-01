@@ -51,3 +51,4 @@ export function uploadBufferToCloudinary(buffer, originalName, mimeType) {
     uploadStream.end(buffer);
   });
 }
+

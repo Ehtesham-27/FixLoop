@@ -1,6 +1,7 @@
 import { ticketService } from '../services/ticket.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { cloudinaryConfigured, uploadBufferToCloudinary } from '../config/cloudinary.js';
+import { ApiError } from '../utils/ApiError.js';
 
 export const createTicket = asyncHandler(async (req, res) => {
   const uploadedFiles = [];
@@ -18,10 +19,19 @@ export const createTicket = asyncHandler(async (req, res) => {
   let images;
 
   if (cloudinaryConfigured && uploadedFiles.length > 0) {
-    // Upload each buffer to Cloudinary; store the persistent secure_url
-    const cloudinaryResults = await Promise.all(
-      uploadedFiles.map((f) => uploadBufferToCloudinary(f.buffer, f.originalname, f.mimetype))
-    );
+    // Upload each buffer to Cloudinary; store the persistent secure_url.
+    // Any Cloudinary failure (network, credentials, quota) produces a clear 503
+    // rather than a generic 500, so the client can display a useful message.
+    let cloudinaryResults;
+    try {
+      cloudinaryResults = await Promise.all(
+        uploadedFiles.map((f) => uploadBufferToCloudinary(f.buffer, f.originalname, f.mimetype))
+      );
+    } catch (uploadErr) {
+      throw ApiError.serviceUnavailable(
+        `Image upload service temporarily unavailable. Please try again. (${uploadErr.message})`
+      );
+    }
     images = cloudinaryResults.map((result, i) => ({
       fileName: result.public_id,
       originalName: uploadedFiles[i].originalname,
