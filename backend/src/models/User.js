@@ -35,6 +35,17 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    refreshTokens: {
+      type: [
+        {
+          tokenHash: { type: String, required: true },
+          expiresAt: { type: Date, required: true },
+          createdAt: { type: Date, default: Date.now }
+        }
+      ],
+      select: false,
+      default: []
     }
   },
   {
@@ -42,6 +53,7 @@ const userSchema = new mongoose.Schema(
     toJSON: {
       transform: (doc, ret) => {
         delete ret.passwordHash;
+        delete ret.refreshTokens;
         delete ret.__v;
         return ret;
       }
@@ -49,11 +61,22 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Note: unique index on email is created automatically via { unique: true } on the field definition.
-
 // Method to verify password
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.passwordHash);
+};
+
+// Safe object representation without sensitive internal fields
+userSchema.methods.toSafeObject = function () {
+  return {
+    _id: this._id,
+    name: this.name,
+    email: this.email,
+    role: this.role,
+    isActive: this.isActive,
+    createdAt: this.createdAt,
+    updatedAt: this.updatedAt
+  };
 };
 
 export const User = mongoose.model('User', userSchema);

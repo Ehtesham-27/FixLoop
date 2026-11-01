@@ -17,7 +17,9 @@
     "check:backend": "npm run check --prefix backend",
     "seed:backend": "npm run seed --prefix backend",
     "seed:backend:interactive": "npm run seed:interactive --prefix backend",
-    "test:db": "npm run test:db --prefix backend"
+    "test:db": "npm run test:db --prefix backend",
+    "test:auth": "npm run test:auth --prefix backend",
+    "test": "npm test --prefix backend"
   },
   "keywords": [
     "campus-maintenance",

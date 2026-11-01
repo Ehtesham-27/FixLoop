@@ -1,42 +1,82 @@
+import { authService } from '../services/auth.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import { getClearRefreshTokenCookieOptions, getRefreshTokenCookieOptions } from '../utils/token.js';
 
-/**
- * Auth Controller Scaffold
- * 
- * TODO [Phase 2]: Wire controllers to authService.
- */
 export const register = asyncHandler(async (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'Register endpoint is scaffolded. Implementation scheduled for Phase 2.'
+  const { user, accessToken, refreshToken } = await authService.registerUser(req.body);
+
+  // Set secure HttpOnly cookie for refresh token
+  res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions());
+
+  res.status(201).json({
+    success: true,
+    message: 'User registered successfully',
+    data: {
+      user,
+      token: accessToken
+    }
   });
 });
 
 export const login = asyncHandler(async (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'Login endpoint is scaffolded. Implementation scheduled for Phase 2.'
+  const { user, accessToken, refreshToken } = await authService.loginUser(req.body);
+
+  // Set secure HttpOnly cookie for refresh token
+  res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions());
+
+  res.status(200).json({
+    success: true,
+    message: 'Login successful',
+    data: {
+      user,
+      token: accessToken
+    }
   });
 });
 
 export const refreshToken = asyncHandler(async (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'Refresh token endpoint is scaffolded. Implementation scheduled for Phase 2.'
+  const currentRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+  const { user, accessToken, refreshToken: newRefreshToken } = await authService.refreshTokens(
+    currentRefreshToken
+  );
+
+  // Rotate HttpOnly cookie
+  res.cookie('refreshToken', newRefreshToken, getRefreshTokenCookieOptions());
+
+  res.status(200).json({
+    success: true,
+    message: 'Token refreshed successfully',
+    data: {
+      user,
+      token: accessToken
+    }
   });
 });
 
 export const logout = asyncHandler(async (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'Logout endpoint is scaffolded. Implementation scheduled for Phase 2.'
+  const tokenToRevoke = req.cookies?.refreshToken || req.body?.refreshToken;
+
+  if (tokenToRevoke) {
+    await authService.logoutUser(tokenToRevoke);
+  }
+
+  // Clear refresh token cookie
+  res.clearCookie('refreshToken', getClearRefreshTokenCookieOptions());
+
+  res.status(200).json({
+    success: true,
+    message: 'Logged out successfully'
   });
 });
 
 export const getMe = asyncHandler(async (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'GetMe endpoint is scaffolded. Implementation scheduled for Phase 2.'
+  const user = await authService.getMe(req.user._id);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user
+    }
   });
 });
-
