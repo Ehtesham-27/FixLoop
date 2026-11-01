@@ -16,7 +16,8 @@ export async function backfillLegacySlaTickets() {
   const bulkOps = legacyTickets.map((t) => {
     const priority = t.priority || PRIORITIES.MEDIUM;
     const hours = SLA_TARGETS[priority] || SLA_TARGETS[PRIORITIES.MEDIUM];
-    const createdAt = t.createdAt ? new Date(t.createdAt).getTime() : Date.now();
+    const rawCreatedTime = t.createdAt ? new Date(t.createdAt).getTime() : NaN;
+    const createdAt = Number.isFinite(rawCreatedTime) ? rawCreatedTime : Date.now();
     const dueAt = new Date(createdAt + hours * 60 * 60 * 1000);
 
     return {

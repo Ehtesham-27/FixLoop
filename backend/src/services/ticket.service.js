@@ -474,6 +474,10 @@ export const ticketService = {
       throw ApiError.notFound('Ticket not found');
     }
 
+    if (ticket.status === TICKET_STATUS.RESOLVED) {
+      throw ApiError.badRequest('Cannot change priority on a resolved ticket');
+    }
+
     const oldPriority = ticket.priority;
     const oldTargetHours = ticket.slaTargetHours || slaService.getSlaTargetHours(oldPriority);
     const oldDueAt = ticket.dueAt || slaService.deriveDueAt(ticket);

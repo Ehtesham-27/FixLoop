@@ -402,6 +402,17 @@ async function runSlaTests() {
     assert(resolveData.data?.ticket?.slaStatus === SLA_STATUS.RESOLVED_ON_TIME, 'Ticket marked RESOLVED_ON_TIME');
     assert(resolveData.data?.ticket?.isOverdue === false, 'Resolved ticket is not overdue');
 
+    // Requirement 22: Changing priority on a resolved ticket cannot create a new SLA deadline
+    const resolvedPriorityRes = await fetch(`${baseUrl}/tickets/${ticket1Id}/priority`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ priority: PRIORITIES.LOW })
+    });
+    assert(resolvedPriorityRes.status === 400, 'Requirement 22: Changing priority on resolved ticket is rejected (400 Bad Request)');
+
   } finally {
     console.log('\n--- Cleaning up test records ---');
     if (createdTicketIds.length > 0) {
