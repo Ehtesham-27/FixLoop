@@ -27,12 +27,19 @@
     "lint": "npm run lint --prefix frontend",
     "build": "npm run build --prefix frontend"
   },
+  "allowScripts": {
+    "esbuild": true
+  },
   "keywords": [
     "campus-maintenance",
     "issue-tracking",
     "fullstack",
     "mern"
   ],
+  "engines": {
+    "node": "22.x",
+    "npm": ">=10.0.0"
+  },
   "author": "",
   "license": "ISC"
 }
