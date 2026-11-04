@@ -159,31 +159,12 @@ npm install --prefix frontend
 
 ### 2. Environment Configuration
 
-**Backend:**
-Copy `backend/.env.example` to `backend/.env` and supply your database connection and secrets:
-```dotenv
-NODE_ENV=development
-PORT=5001
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/fixloop?retryWrites=true&w=majority
-CLIENT_ORIGIN=http://localhost:5173
-JWT_ACCESS_SECRET=your_super_secret_access_key_min_32_chars
-JWT_REFRESH_SECRET=your_super_secret_refresh_key_min_32_chars
-ACCESS_TOKEN_TTL=15m
-REFRESH_TOKEN_TTL=7d
-UPLOAD_DIR=uploads
-MAX_FILE_SIZE_MB=5
+Refer to the template files for local configuration:
+- **Backend:** Copy `backend/.env.example` to `backend/.env` and configure your local settings.
+- **Frontend:** Copy `frontend/.env.example` to `frontend/.env` and configure your API endpoint.
 
-# Cloudinary (optional in dev, required in production)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-```
-
-**Frontend:**
-Copy `frontend/.env.example` to `frontend/.env`:
-```dotenv
-VITE_API_BASE_URL=http://localhost:5001/api
-```
+> [!NOTE]
+> All `.env` files are strictly ignored by Git and must never be committed or reflected in documentation.
 
 ### 3. Database Seeding
 Seed initial maintenance categories and optional administrative accounts:
