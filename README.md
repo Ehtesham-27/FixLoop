@@ -182,54 +182,7 @@ npm run dev:backend
 npm run dev:frontend
 ```
 
----
-
-## 6. Demo Accounts & Evaluation Credentials
-
-For evaluators, instructors, and demonstration purposes, the following pre-configured test accounts are available to evaluate the role-based workflows:
-
-| Role | Email | Password | Primary Capabilities to Test |
-| :--- | :--- | :--- | :--- |
-| **Administrator** | `admin@campus.edu` | `AdminPassword123!` | Global dashboard, ticket triage, technician assignment, priority updates, SLA overview, technician account provisioning |
-| **Technician** | `tech@campus.edu` | `TechPassword123!` | Assigned work queue, SLA countdowns, starting work (`IN_PROGRESS`), resolving tickets with notes |
-| **Student** | `student@campus.edu` | `StudentPassword123!` | Reporting issues with photo attachments, viewing "My Tickets", tracking status & SLA activity timeline |
-
-### Role-Specific Demonstration Guides
-
-#### 1. Administrator Account
-- **Login:** `admin@campus.edu` / `AdminPassword123!`
-- **Role:** `ADMIN`
-- **What to Evaluate:**
-  - **Campus Dashboard:** Real-time metrics breakdown across ticket states and priorities.
-  - **SLA Overview:** Real-time compliance rate calculation (On Track, At Risk, Overdue, Resolved On Time vs Late).
-  - **Technician Assignment:** Review open tickets and assign technicians via modal dialogs.
-  - **Priority Management:** Escalate ticket priority (`LOW` → `CRITICAL`), triggering automatic SLA recalculation and audit logging.
-  - **User & Technician Provisioning:** Manage campus accounts and provision new technician staff with secure temporary credentials.
-
-#### 2. Technician Account
-- **Login:** `tech@campus.edu` / `TechPassword123!`
-- **Role:** `TECHNICIAN`
-- **What to Evaluate:**
-  - **Work Queue:** Filter and view tasks strictly assigned to this technician.
-  - **SLA Deadlines:** Live countdown timers and overdue badges based on issue priority.
-  - **State Machine Progression:** Transition tickets from `ASSIGNED` → `IN_PROGRESS`.
-  - **Resolution Documentation:** Mark issues as `RESOLVED` with mandatory resolution details (minimum 5 characters).
-
-#### 3. Student / Reporter Account
-- **Login:** `student@campus.edu` / `StudentPassword123!`
-- **Role:** `STUDENT`
-- **What to Evaluate:**
-  - **Issue Reporting:** Create new maintenance tickets specifying category, campus building, room, and photo attachments.
-  - **My Tickets Dashboard:** Track real-time progress, status chips, and priority levels for reported issues.
-  - **Activity Timeline:** Inspect detailed immutable audit logs and technician resolution notes.
-
-> [!WARNING]
-> **Evaluation Security Notice:**  
-> These credentials are provided strictly for demonstration and academic evaluation. Never reuse these credentials in a live public production deployment. In production, change all initial account passwords immediately and restrict administrative access to authorized campus personnel.
-
----
-
-## 7. Automated Testing & Verification
+## 6. Automated Testing & Verification
 
 FixLoop includes 8 automated backend test suites (281 assertions executing against live MongoDB) and full frontend quality checks:
 
@@ -255,7 +208,7 @@ npm run build            # Production Vite bundle build
 
 ---
 
-## 8. Deployment Overview
+## 7. Deployment Overview
 
 FixLoop is designed for a ₹0/month production deployment:
 
@@ -278,7 +231,7 @@ FixLoop is designed for a ₹0/month production deployment:
 
 ---
 
-## 9. License
+## 8. License
 
 Developed for the Campus Maintenance and Issue Management System project.  
 License: ISC
